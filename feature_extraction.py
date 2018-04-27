@@ -1,40 +1,44 @@
 import pandas as pd
 import numpy as np
+from peak import get_peak_series
 
 def run_script():
-    s = pd.Series([1, 2, 3, 4, 2, 0])
-    print s[0]
+    dates = [
+        "2018-01-01", "2018-01-08", "2018-01-015", "2018-01-23", "2018-01-30",
+        "2018-02-01", "2018-02-08", "2018-02-015", "2018-02-23",
+        #"2018-03-01", "2018-03-08", "2018-03-015", "2018-03-23", "2018-03-30"
+        ]
 
-def extract(name, timeseries):
+    s = pd.Series(np.array([2, 0, 0, 5, 5, 5, 4, 3, 8]), dtype=np.int32, index=pd.DatetimeIndex(dates))
+    df1 = extract("first", s)
+    s = pd.Series(np.array([5, 2, 1, 2, 2, 10, 0, 1, 5]), dtype=np.int32, index=pd.DatetimeIndex(dates))
+    df2 = extract("second", s)
+    print pd.concat([df1, df2])
+
+def extract(index_name, timeseries):
     assert isinstance(timeseries, pd.Series)
 
-    duration = len(timeseries)
     max_y = timeseries.max()
-    max_y_pos = timeseries.values.argmax() + 1
-    mean_y = timeseries.mean()
-    median_y = timeseries.median()
-    sum_y = timeseries.sum()
+    peakseries = get_peak_series(timeseries)
 
-    peakseries = __peak_analysis__(timeseries)
     peak_feature_map = __extract_peak_features(timeseries, peakseries, max_y)
     gradient_feature_map = __extract_gradient_features(timeseries)
 
     feature_map = {
-        'duration':duration,
+        'duration':timeseries.count(),
         'max_y': max_y,
-        'max_y_pos': max_y_pos,
-        'mean_y': mean_y,
-        'median_y': median_y,
-        'sum_y': sum_y,
+        'max_y_pos': timeseries.values.argmax() + 1,
+        'mean_y': timeseries.mean(),
+        'sum_y': timeseries.sum(),
+        'q25': timeseries.quantile(q=0.25),
+        'q50': timeseries.quantile(q=0.5),
+        'q75': timeseries.quantile(q=0.75),
+        'std': timeseries.std()
+
     }
     feature_map.update(peak_feature_map)
     feature_map.update(gradient_feature_map)
-
-    # TODO return data frame with name as index
-
-
-def __peak_analysis__(timeseries):
-    pass # TODO
+    return pd.DataFrame(data=feature_map, index=[index_name])
 
 def __extract_peak_features(timeseries, peakseries, max_y, resample_time = 7):
     df = pd.DataFrame(data={'values': timeseries.values, 'peaks': peakseries.values}, index=timeseries.index)
@@ -70,6 +74,10 @@ def __extract_peak_features(timeseries, peakseries, max_y, resample_time = 7):
     avg_amp = avg_amp
     max_amp = max_amp
 
+    # TODO Positive Peak Deviation (AVG(PEAK(i) - mean)
+    # TODO Negative Peak Deviation (AVG(VALLEY(i) - mean)
+
+
     return {'peak_down': peak_down, 'peak_none': peak_none, 'peak_up': peak_up,
             'atbp_up': atbp_up, 'atbp_down': atbp_down,
             'min_amp': min_amp, 'avg_amp':avg_amp, 'max_amp': max_amp,
@@ -84,7 +92,12 @@ def __extract_gradient_features(timeseries):
     neg_gradients = gradients[np.where(gradients < 0)]
     mpg = pos_gradients.mean() if len(pos_gradients) > 0 else np.NaN
     mng = neg_gradients.mean() if len(neg_gradients) > 0 else np.NaN
+    # TODO count positive and negative gradients
+    # TODO count sequential positive and negative gradients (min, mean, max, total each)
     return {'MPG': mpg, 'MNG':mng}
 
 ############
+pd.set_option("display.max_rows", 500)
+pd.set_option('display.expand_frame_repr', True)
+
 run_script()
