@@ -10,7 +10,7 @@ def run_script():
          "2018-03-01", "2018-03-08", "2018-03-015", "2018-03-23", "2018-03-30"
     ]
     s = pd.Series(np.array([4, 6]), dtype=np.int32, index=pd.DatetimeIndex(dates[0:2]))
-    print extract("the_name", s).columns
+    print extract("the_name", s)
 
 
 def extract(index_name, timeseries):
@@ -54,15 +54,19 @@ def __extract_peak_features(timeseries, mean_y, max_y, resample_time=7):
     # time between
     up_times = df[df['peaks'] == 1].index
     delta_ups = [(up_times[idx] - up_times[idx - 1]).days for idx in range(1, len(up_times))]
-    atbp_up = np.NaN
+    min_tbp_up, avg_tbp_up, max_tbp_up  = np.NaN, np.NaN, np.NaN
     if len(delta_ups) > 0:
-        atbp_up = (np.average(delta_ups) / resample_time)
+        min_tbp_up = np.min(delta_ups) / resample_time
+        avg_tbp_up = (np.average(delta_ups) / resample_time)
+        max_tbp_up = np.max(delta_ups) / resample_time
 
     down_times = df[df['peaks'] == -1].index
     delta_downs = [(down_times[idx] - down_times[idx - 1]).days for idx in range(1, len(down_times))]
-    atbp_down = np.NaN
+    min_tbp_down, avg_tbp_down, max_tbp_down = np.NaN, np.NaN, np.NaN
     if len(delta_downs) > 0:
-        atbp_down = (np.average(delta_downs) / resample_time)
+        min_tbp_down = np.min(delta_downs) / resample_time
+        avg_tbp_down = (np.average(delta_downs) / resample_time)
+        max_tbp_down = np.max(delta_downs) / resample_time
     # amplitudes
     prev = df.number[0]
     amplitudes = []
@@ -79,8 +83,16 @@ def __extract_peak_features(timeseries, mean_y, max_y, resample_time=7):
     avg_amp = avg_amp
     max_amp = max_amp
     #deviation from mean
-    appd = (df[df.peaks == 1].number - mean_y).mean()
-    anpd = (df[df.peaks == -1].number - mean_y).mean()
+    positive_deviations = (df[df.peaks == 1].number - mean_y)
+    negative_deviations = (df[df.peaks == -1].number - mean_y)
+
+    min_ppd = positive_deviations.min()
+    avg_ppd = positive_deviations.mean()
+    max_ppd = positive_deviations.max()
+
+    min_npd = negative_deviations.min()
+    avg_npd = negative_deviations.mean()
+    max_npd = negative_deviations.max()
     # positve and negative sequence counts (min, mean, max, total each)
     min_ps, mean_ps, max_ps, sum_ps = np.NaN, np.NaN, np.NaN, np.NaN
     min_ns, mean_ns, max_ns, sum_ns = np.NaN, np.NaN, np.NaN, np.NaN
@@ -108,9 +120,11 @@ def __extract_peak_features(timeseries, mean_y, max_y, resample_time=7):
         min_ns, mean_ns, max_ns, sum_ns = np.min(neg_counts), np.mean(neg_counts), np.max(neg_counts), np.sum(neg_counts)
 
     return {'peak_down': peak_down, 'peak_none': peak_none, 'peak_up': peak_up, # peak counts
-            'atbp_up': atbp_up, 'atbp_down': atbp_down, # average time between peaks
+            'min_TBP_up': min_tbp_up, 'avg_TBP_up': avg_tbp_up, 'max_TBP_up': max_tbp_up,
+            'min_TBP_down': min_tbp_down, 'avg_TBP_down': avg_tbp_down, 'max_TBP_down': max_tbp_down,
             'min_amp': min_amp, 'avg_amp': avg_amp, 'max_amp': max_amp, # amplitures
-            'APPD': appd, 'ANPD': anpd, # Average Positive/Negative Peak Deviation
+            'min_PPD': min_ppd, 'avg_PPD': avg_ppd, 'max_PPD': max_ppd,
+            'min_NPD': min_npd, 'avg_NPD': avg_npd, 'max_NPD': max_npd,# Average Positive/Negative Peak Deviation #TODO take min and max as well
             'min_PS': min_ps, 'mean_PS': mean_ps, 'max_PS':max_ps, 'sum_PS': sum_ps,
             'min_NS': min_ns, 'mean_NS': mean_ns, 'max_NS':max_ns, 'sum_NS': sum_ns,
             }
@@ -126,13 +140,18 @@ def __extract_gradient_features(timeseries):
     pos_gradients = gradients[np.where(gradients >= 0)]
     neg_gradients = gradients[np.where(gradients < 0)]
     #mean positive and negative gradient
-    mpg = pos_gradients.mean() if len(pos_gradients) > 0 else np.NaN
-    mng = neg_gradients.mean() if len(neg_gradients) > 0 else np.NaN
+    min_PG = pos_gradients.min() if len(pos_gradients) > 0 else np.NaN
+    avg_PG = pos_gradients.mean() if len(pos_gradients) > 0 else np.NaN
+    max_PG = pos_gradients.max() if len(pos_gradients) > 0 else np.NaN
+    min_NG = neg_gradients.min() if len(neg_gradients) > 0 else np.NaN
+    avg_NG = neg_gradients.mean() if len(neg_gradients) > 0 else np.NaN
+    max_NG = neg_gradients.max() if len(neg_gradients) > 0 else np.NaN
     #postive and negative gradient count
-    pgc = len(pos_gradients)
-    ngc = len(neg_gradients)
-    return {'MPG': mpg, 'MNG': mng,
-            'PGC': pgc, 'NGC':ngc}
+    pg_count = len(pos_gradients)
+    ng_count = len(neg_gradients)
+    return {'min_PG': min_PG, 'avg_PG': avg_PG, 'max_PG': max_PG,
+            'min_NG': min_NG, 'avg_NG': avg_NG, 'max_NG': max_NG,
+            'PG_count': pg_count, 'NG_count':ng_count}
 
 
 ############
