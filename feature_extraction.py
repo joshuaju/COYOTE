@@ -7,10 +7,10 @@ def run_script():
     dates = [
         "2018-01-01", "2018-01-08", "2018-01-015", "2018-01-23", "2018-01-30",
         "2018-02-01", "2018-02-08", "2018-02-015", "2018-02-23",
-        # "2018-03-01", "2018-03-08", "2018-03-015", "2018-03-23", "2018-03-30"
+         "2018-03-01", "2018-03-08", "2018-03-015", "2018-03-23", "2018-03-30"
     ]
-    s = pd.Series(np.array([0, 5, 6, 7, 8, 8, 6, 6 , 0]), dtype=np.int32, index=pd.DatetimeIndex(dates))
-    print extract("the_name", s)
+    s = pd.Series(np.array([4, 6]), dtype=np.int32, index=pd.DatetimeIndex(dates[0:2]))
+    print extract("the_name", s).columns
 
 
 def extract(index_name, timeseries):
@@ -81,15 +81,42 @@ def __extract_peak_features(timeseries, mean_y, max_y, resample_time=7):
     #deviation from mean
     appd = (df[df.peaks == 1].number - mean_y).mean()
     anpd = (df[df.peaks == -1].number - mean_y).mean()
-    return {'peak_down': peak_down, 'peak_none': peak_none, 'peak_up': peak_up,
-            'atbp_up': atbp_up, 'atbp_down': atbp_down,
-            'min_amp': min_amp, 'avg_amp': avg_amp, 'max_amp': max_amp,
-            'APPD': appd, 'ANPD': anpd
+    # positve and negative sequence counts (min, mean, max, total each)
+    min_ps, mean_ps, max_ps, sum_ps = np.NaN, np.NaN, np.NaN, np.NaN
+    min_ns, mean_ns, max_ns, sum_ns = np.NaN, np.NaN, np.NaN, np.NaN
+    if True in np.in1d([-1, 1], peakseries):
+        pos_counts = []
+        neg_counts = []
+        counter = 0
+        trend_up = None
+        for val in peakseries:
+            counter = counter + 1
+            if val == 1:
+                pos_counts.append(counter)
+                counter = 0
+                trend_up = True
+            elif val == -1:
+                neg_counts.append(counter)
+                counter = 0
+                trend_up = False
+        neg_counts.append(counter) if trend_up else pos_counts.append(counter)
+        pos_counts = np.array(pos_counts)
+        neg_counts = np.array(neg_counts)
+        print pos_counts
+        print neg_counts
+        min_ps, mean_ps, max_ps, sum_ps = np.min(pos_counts), np.mean(pos_counts), np.max(pos_counts), np.sum(pos_counts)
+        min_ns, mean_ns, max_ns, sum_ns = np.min(neg_counts), np.mean(neg_counts), np.max(neg_counts), np.sum(neg_counts)
+
+    return {'peak_down': peak_down, 'peak_none': peak_none, 'peak_up': peak_up, # peak counts
+            'atbp_up': atbp_up, 'atbp_down': atbp_down, # average time between peaks
+            'min_amp': min_amp, 'avg_amp': avg_amp, 'max_amp': max_amp, # amplitures
+            'APPD': appd, 'ANPD': anpd, # Average Positive/Negative Peak Deviation
+            'min_PS': min_ps, 'mean_PS': mean_ps, 'max_PS':max_ps, 'sum_PS': sum_ps,
+            'min_NS': min_ns, 'mean_NS': mean_ns, 'max_NS':max_ns, 'sum_NS': sum_ns,
             }
 
 
 def __extract_gradient_features(timeseries):
-    assert timeseries.count() >= 2
     gradients = []
     for idx in range(1, len(timeseries)):
         gradient = timeseries[idx] - timeseries[idx - 1]
@@ -104,13 +131,13 @@ def __extract_gradient_features(timeseries):
     #postive and negative gradient count
     pgc = len(pos_gradients)
     ngc = len(neg_gradients)
-    # TODO positve and negative sequences (min, mean, max, total each)
     return {'MPG': mpg, 'MNG': mng,
             'PGC': pgc, 'NGC':ngc}
 
 
 ############
 pd.set_option("display.max_rows", 500)
-pd.set_option('display.expand_frame_repr', True)
+pd.set_option("display.max_columns", 500)
+pd.set_option('display.expand_frame_repr', False)
 
 run_script()
