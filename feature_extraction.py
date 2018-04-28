@@ -160,7 +160,7 @@ def __extract_peak_features(timeseries, mean_y, max_y, resample_time=7):
             'min_amp': min_amp, 'avg_amp': avg_amp, 'max_amp': max_amp,  # amplitures
             'min_PPD': min_ppd, 'avg_PPD': avg_ppd, 'max_PPD': max_ppd,
             'min_NPD': min_npd, 'avg_NPD': avg_npd, 'max_NPD': max_npd,
-            # Average Positive/Negative Peak Deviation #TODO take min and max as well
+            # Average Positive/Negative Peak Deviation
             'min_PS': min_ps, 'mean_PS': mean_ps, 'max_PS': max_ps, 'sum_PS': sum_ps,
             'min_NS': min_ns, 'mean_NS': mean_ns, 'max_NS': max_ns, 'sum_NS': sum_ns,
             }
