@@ -100,5 +100,10 @@ ENV/
 # mypy
 .mypy_cache/
 
-# PyCharm Studd
+# PyCharm Stuff
 .idea/
+
+# Test files
+logs/
+timeseries/
+featuretable/
