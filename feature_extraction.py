@@ -147,8 +147,6 @@ def __extract_peak_features(timeseries, mean_y, max_y, resample_time=7):
         neg_counts.append(counter) if trend_up else pos_counts.append(counter)
         pos_counts = np.array(pos_counts)
         neg_counts = np.array(neg_counts)
-        print pos_counts
-        print neg_counts
         min_ps, mean_ps, max_ps, sum_ps = np.min(pos_counts), np.mean(pos_counts), np.max(pos_counts), np.sum(
             pos_counts)
         min_ns, mean_ns, max_ns, sum_ns = np.min(neg_counts), np.mean(neg_counts), np.max(neg_counts), np.sum(
