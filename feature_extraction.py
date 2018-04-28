@@ -11,7 +11,7 @@ def __run_script__(path_to_timeseries, path_to_featuretable):
         path_to_timeseries,
         index_col=[COL_REPO, COL_DATE], parse_dates=[COL_DATE],
         usecols=[COL_REPO, COL_DATE, COL_INTEGRATIONS],
-        dtype={'integrations': np.float64})
+        dtype={'integrations': np.float64}).dropna()
     transform_timeseries_frame_to_featuretable(frame, path_to_featuretable)
 
 def transform_timeseries_frame_to_featuretable(frame, path_to_featuretable):
@@ -170,7 +170,6 @@ def __extract_gradient_features(timeseries):
         gradient = timeseries[idx] - timeseries[idx - 1]
         gradients.append(gradient)
     gradients = np.array(gradients)
-
     pos_gradients = gradients[np.where(gradients >= 0)]
     neg_gradients = gradients[np.where(gradients < 0)]
     # mean positive and negative gradient -------------------------------------------------------------------------------
