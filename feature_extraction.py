@@ -1,15 +1,26 @@
+import sys, os
 import pandas as pd
 import numpy as np
 
 
-def run_script():
-    dates = [
-        "2018-01-01", "2018-01-08", "2018-01-015", "2018-01-23", "2018-01-30",
-        "2018-02-01", "2018-02-08", "2018-02-015", "2018-02-23",
-         "2018-03-01", "2018-03-08", "2018-03-015", "2018-03-23", "2018-03-30"
-    ]
-    s = pd.Series(np.array([6, 2, 8, 10, 4]), dtype=np.int32, index=pd.DatetimeIndex(dates[0:5]))
-    print extract("the_name", s)
+def __run_script__(path_to_timeseries, path_to_featuretable):
+    COL_REPO = 0
+    COL_DATE = 1
+    COL_INTEGRATIONS = 4
+    frame = pd.read_csv(
+        path_to_timeseries,
+        index_col=[COL_REPO, COL_DATE], parse_dates=[COL_DATE],
+        usecols=[COL_REPO, COL_DATE, COL_INTEGRATIONS],
+        dtype={'integrations': np.float64})
+    transform_timeseries_frame_to_featuretable(frame, path_to_featuretable)
+
+def transform_timeseries_frame_to_featuretable(frame, path_to_featuretable):
+    assert isinstance(frame, pd.DataFrame)
+    write_header = True
+    for filename, group in frame.groupby(level=0):
+        feature_frame = extract(filename, group.reset_index("filename", drop=True).integrations)
+        feature_frame.to_csv(path_to_featuretable, mode="a", header=write_header)
+        write_header = False
 
 
 def extract(index_name, timeseries):
@@ -37,6 +48,29 @@ def extract(index_name, timeseries):
     return pd.DataFrame(data=feature_map, index=[index_name])
 
 
+def get_peak_series(timeseries, PEAK=1, NONE=0, VALLEY=-1):
+    length = len(timeseries)
+    # the booleans remember the trend (up or down), when iterating the timeseries
+    trend_up = False
+    trend_down = False
+    # 'peakseries' stores the peak type. Initially, all points are set to NONE-Peaks
+    peakseries = pd.Series(np.repeat(NONE, length), dtype=np.int8)
+    for idx in range(1, length):
+        previous = timeseries[idx - 1]
+        current = timeseries[idx]
+        if previous < current:
+            trend_up = True
+            if trend_down:  # if true, the trend shifted from downwards to upwards
+                peakseries.at[idx - 1] = VALLEY  # set previous point to be a valley
+                trend_down = False
+        elif previous > current:
+            trend_down = True
+            if trend_up:  # if true, the trend shifted from upwards to downwards
+                peakseries.at[idx - 1] = PEAK  # set previous point to be a peak
+                trend_up = False
+    return peakseries
+
+
 def __extract_peak_features(timeseries, mean_y, max_y, resample_time=7):
     PEAK, NONE, VALLEY = 1, 0, -1
     peakseries = get_peak_series(timeseries, PEAK=PEAK, NONE=NONE, VALLEY=VALLEY)
@@ -53,7 +87,7 @@ def __extract_peak_features(timeseries, mean_y, max_y, resample_time=7):
     # time between -----------------------------------------------------------------------------------------------------
     up_times = df[df['peaks'] == 1].index
     delta_ups = [(up_times[idx] - up_times[idx - 1]).days for idx in range(1, len(up_times))]
-    min_tbp_up, avg_tbp_up, max_tbp_up  = np.NaN, np.NaN, np.NaN
+    min_tbp_up, avg_tbp_up, max_tbp_up = np.NaN, np.NaN, np.NaN
     if len(delta_ups) > 0:
         min_tbp_up = np.min(delta_ups) / resample_time
         avg_tbp_up = (np.average(delta_ups) / resample_time)
@@ -81,7 +115,7 @@ def __extract_peak_features(timeseries, mean_y, max_y, resample_time=7):
     min_amp = min_amp
     avg_amp = avg_amp
     max_amp = max_amp
-    #deviation from mean -----------------------------------------------------------------------------------------------
+    # deviation from mean -----------------------------------------------------------------------------------------------
     positive_deviations = (df[df.peaks == 1].number - mean_y)
     negative_deviations = (df[df.peaks == -1].number - mean_y)
 
@@ -115,40 +149,21 @@ def __extract_peak_features(timeseries, mean_y, max_y, resample_time=7):
         neg_counts = np.array(neg_counts)
         print pos_counts
         print neg_counts
-        min_ps, mean_ps, max_ps, sum_ps = np.min(pos_counts), np.mean(pos_counts), np.max(pos_counts), np.sum(pos_counts)
-        min_ns, mean_ns, max_ns, sum_ns = np.min(neg_counts), np.mean(neg_counts), np.max(neg_counts), np.sum(neg_counts)
+        min_ps, mean_ps, max_ps, sum_ps = np.min(pos_counts), np.mean(pos_counts), np.max(pos_counts), np.sum(
+            pos_counts)
+        min_ns, mean_ns, max_ns, sum_ns = np.min(neg_counts), np.mean(neg_counts), np.max(neg_counts), np.sum(
+            neg_counts)
     # ------------------------------------------------------------------------------------------------------------------
-    return {'peak_down': peak_down, 'peak_none': peak_none, 'peak_up': peak_up, # peak counts
+    return {'peak_down': peak_down, 'peak_none': peak_none, 'peak_up': peak_up,  # peak counts
             'min_TBP_up': min_tbp_up, 'avg_TBP_up': avg_tbp_up, 'max_TBP_up': max_tbp_up,
             'min_TBP_down': min_tbp_down, 'avg_TBP_down': avg_tbp_down, 'max_TBP_down': max_tbp_down,
-            'min_amp': min_amp, 'avg_amp': avg_amp, 'max_amp': max_amp, # amplitures
+            'min_amp': min_amp, 'avg_amp': avg_amp, 'max_amp': max_amp,  # amplitures
             'min_PPD': min_ppd, 'avg_PPD': avg_ppd, 'max_PPD': max_ppd,
-            'min_NPD': min_npd, 'avg_NPD': avg_npd, 'max_NPD': max_npd,# Average Positive/Negative Peak Deviation #TODO take min and max as well
-            'min_PS': min_ps, 'mean_PS': mean_ps, 'max_PS':max_ps, 'sum_PS': sum_ps,
-            'min_NS': min_ns, 'mean_NS': mean_ns, 'max_NS':max_ns, 'sum_NS': sum_ns,
+            'min_NPD': min_npd, 'avg_NPD': avg_npd, 'max_NPD': max_npd,
+            # Average Positive/Negative Peak Deviation #TODO take min and max as well
+            'min_PS': min_ps, 'mean_PS': mean_ps, 'max_PS': max_ps, 'sum_PS': sum_ps,
+            'min_NS': min_ns, 'mean_NS': mean_ns, 'max_NS': max_ns, 'sum_NS': sum_ns,
             }
-
-def get_peak_series(timeseries, PEAK=1, NONE=0, VALLEY=-1):
-    length = len(timeseries)
-    # the booleans remember the trend (up or down), when iterating the timeseries
-    trend_up = False
-    trend_down = False
-    # 'peakseries' stores the peak type. Initially, all points are set to NONE-Peaks
-    peakseries = pd.Series(np.repeat(NONE, length), dtype=np.int8)
-    for idx in range(1, length):
-        previous = timeseries[idx-1]
-        current = timeseries[idx]
-        if previous < current:
-            trend_up = True
-            if trend_down: # if true, the trend shifted from downwards to upwards
-                peakseries.at[idx-1] = VALLEY # set previous point to be a valley
-                trend_down = False
-        elif previous > current:
-            trend_down = True
-            if trend_up: # if true, the trend shifted from upwards to downwards
-                peakseries.at[idx-1] = PEAK # set previous point to be a peak
-                trend_up = False
-    return peakseries
 
 
 def __extract_gradient_features(timeseries):
@@ -160,25 +175,32 @@ def __extract_gradient_features(timeseries):
 
     pos_gradients = gradients[np.where(gradients >= 0)]
     neg_gradients = gradients[np.where(gradients < 0)]
-    #mean positive and negative gradient -------------------------------------------------------------------------------
+    # mean positive and negative gradient -------------------------------------------------------------------------------
     min_PG = pos_gradients.min() if len(pos_gradients) > 0 else np.NaN
     avg_PG = pos_gradients.mean() if len(pos_gradients) > 0 else np.NaN
     max_PG = pos_gradients.max() if len(pos_gradients) > 0 else np.NaN
     min_NG = neg_gradients.min() if len(neg_gradients) > 0 else np.NaN
     avg_NG = neg_gradients.mean() if len(neg_gradients) > 0 else np.NaN
     max_NG = neg_gradients.max() if len(neg_gradients) > 0 else np.NaN
-    #postive and negative gradient count -------------------------------------------------------------------------------
+    # postive and negative gradient count -------------------------------------------------------------------------------
     pg_count = len(pos_gradients)
     ng_count = len(neg_gradients)
     # ------------------------------------------------------------------------------------------------------------------
     return {'min_PG': min_PG, 'avg_PG': avg_PG, 'max_PG': max_PG,
             'min_NG': min_NG, 'avg_NG': avg_NG, 'max_NG': max_NG,
-            'PG_count': pg_count, 'NG_count':ng_count}
+            'PG_count': pg_count, 'NG_count': ng_count}
 
 
 # ----------------------------------------------------------------------------------------------------------------------
+assert len(sys.argv) == 3
+path_to_timeseries = os.path.expanduser(sys.argv[1])
+path_to_featuretable = os.path.expanduser(sys.argv[2])
+
+assert os.path.isfile(path_to_timeseries)
+assert not os.path.isfile(path_to_featuretable)
+
 pd.set_option("display.max_rows", 500)
 pd.set_option("display.max_columns", 500)
 pd.set_option('display.expand_frame_repr', False)
 
-run_script()
+__run_script__(path_to_timeseries, path_to_featuretable)
