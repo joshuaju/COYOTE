@@ -5,23 +5,6 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 
-def run_script():
-    # load combined datasets and ground-truth labels
-    org_neg_frame, org_neg_labels = ds_util.load_org_and_neg_combined_with_labels()
-    util_neg_frame, util_neg_labels = ds_util.load_util_and_neg_combined_with_labels()
-    # find correlating features
-    drop_org = get_correlating_features(org_neg_frame)
-    drop_util = get_correlating_features(util_neg_frame)
-    # drop correlating features
-    org_neg_frame.drop(drop_org, axis=1, inplace=True)
-    util_neg_frame.drop(drop_util, axis=1, inplace=True)
-    # scatter the features
-    scatter_plot(org_neg_frame, org_neg_labels)
-    scatter_plot(util_neg_frame, util_neg_labels)
-
-    plt.show()
-
-
 def get_correlating_features(features, drop_feature=[], corr_threshold=0.9):
     ''' Identifies the correlating features. Returns a list of features with a correlation greater or equal
         to the threshold. The correlation is measured as an absolute value, so both positve and negative correlations
@@ -75,4 +58,3 @@ def scatter_plot(features, labels):
 pd.set_option("display.max_rows", 1000)
 pd.set_option("display.max_columns", 500)
 pd.set_option('display.expand_frame_repr', False)
-run_script()
