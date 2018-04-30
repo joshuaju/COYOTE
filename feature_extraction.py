@@ -2,11 +2,11 @@ import pandas as pd
 import numpy as np
 
 
-def transform_timeseries_frame_to_featuretable(frame, path_to_featuretable):
+def transform_timeseries_frame_to_featuretable(frame, path_to_featuretable, measure):
     assert isinstance(frame, pd.DataFrame)
     write_header = True
     for filename, group in frame.groupby(level=0):
-        feature_frame = extract(filename, group.reset_index("filename", drop=True).integrations)
+        feature_frame = extract(filename, group.reset_index("filename", drop=True)[measure])
         feature_frame.to_csv(path_to_featuretable, mode="a", header=write_header)
         write_header = False
 

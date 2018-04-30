@@ -1,6 +1,6 @@
 """
 Usage:
-    coyote.py extract <TIMESERIES> <FEATURETABLE>
+    coyote.py extract <TIMESERIES> <FEATURETABLE> --measure=<MEASURE>
     coyote.py cluster [--tsne]
 
 """
@@ -46,7 +46,7 @@ def __remove_features_and_cluster__(corr_threshold, save_tsne):
         save_tsne_plot(util_neg_frame, util_neg_labels, 'plots/tsne_util_neg.png')
 
 
-def extract_integration_frequency(path_to_timeseries, path_to_featuretable):
+def extract(path_to_timeseries, path_to_featuretable, measure):
     ''' Extracts features from the specified time-series file and stores them in the specified featuretable file.
 
         The time-series is expected to be a csv file with the following columns:
@@ -61,22 +61,23 @@ def extract_integration_frequency(path_to_timeseries, path_to_featuretable):
         print "Featuretable already exists: %s" % path_to_featuretable
         exit(1)
 
-    COL_REPO = 0
-    COL_DATE = 1
-    COL_INTEGRATIONS = 4
+    COL_REPO = 'filename'
+    COL_DATE = 'date'
+    COL_MEASURE = measure
 
     frame = pd.read_csv(
         path_to_timeseries,
         index_col=[COL_REPO, COL_DATE], parse_dates=[COL_DATE],
-        usecols=[COL_REPO, COL_DATE, COL_INTEGRATIONS],
-        dtype={'integrations': np.float64}).dropna()
-    feature_extraction.transform_timeseries_frame_to_featuretable(frame, path_to_featuretable)
+        usecols=[COL_REPO, COL_DATE, COL_MEASURE],
+        #dtype={COL_MEASURE: np.float64}
+    ).dropna()
+    feature_extraction.transform_timeseries_frame_to_featuretable(frame, path_to_featuretable, measure=COL_MEASURE)
 
 
 def train_and_validate(features, true_labels, features_validation, true_labels_validation):
     ''' Trains and validates a K-means classifier. Prints results to stdout.'''
-    model = clustering.train(features, true_labels)
-    clustering.validate(model, features_validation, true_labels_validation)
+    model, nan_columns = clustering.train(features, true_labels)
+    clustering.validate(model, features_validation.drop(nan_columns, axis=1), true_labels_validation)
 
 
 def __drop_features__(frame, corr_threshold):
@@ -101,7 +102,8 @@ args = docopt(__doc__)
 if args['extract']:
     path_to_timeseries = args['<TIMESERIES>']
     path_to_featuretable = args['<FEATURETABLE>']
-    extract_integration_frequency(path_to_timeseries, path_to_featuretable)
+    measure = args['--measure']
+    extract(path_to_timeseries, path_to_featuretable, measure)
 elif args['cluster']:
     save_tsne = args['--tsne']
     __remove_features_and_cluster__(corr_threshold=0.85, save_tsne=save_tsne)

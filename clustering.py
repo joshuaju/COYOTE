@@ -13,6 +13,9 @@ def __normalise__(features):
 
 def train(features, true_labels):
     features = __normalise__(features)
+    # after normalisation there can be NaN values, which have to be removed/replaced.
+    nan_columns = features.columns[features.isna().any()].tolist()
+    features = features.drop(nan_columns, axis=1)
 
     model = cluster.KMeans(n_clusters=2, init='k-means++', n_init=10, max_iter=300).fit(features.as_matrix())
     cluster_labels = model.labels_
@@ -21,7 +24,7 @@ def train(features, true_labels):
 
     print "* TRAINING"
     __precision_recall_fscore(true_labels, predicted_labels)
-    return model
+    return model, nan_columns
 
 
 def validate(model, features, true_labels):
