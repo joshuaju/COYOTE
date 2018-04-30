@@ -10,7 +10,7 @@ def get_correlating_features(features, drop_feature=[], corr_threshold=0.9):
         to the threshold. The correlation is measured as an absolute value, so both positve and negative correlations
         are handled the same way. '''
     assert isinstance(features, pd.DataFrame)
-    corr_frame = features.drop(drop_feature, axis=1).corr()
+    corr_frame = features.drop(drop_feature, axis=1).corr(method='pearson')
     for i, row_index in enumerate(corr_frame.index):
         for j, col_index in enumerate(corr_frame.columns):
             if i >= j:  # ignore diagonals and upper triangular matrix
