@@ -1,8 +1,7 @@
 """
 Usage:
     coyote.py extract <TIMESERIES> <FEATURETABLE> --measure=<MEASURE>
-    coyote.py cluster --corr=<THRESHOLD> [--tsne]
-    coyote.py explore --measure=<MEASURE> --out=<FILE>
+    coyote.py cluster --corr=<THRESHOLD> --measure=<MEASURE> [--out=<FILE>] [--tsne]
 """
 import feature_extraction
 import feature_analysis
@@ -122,10 +121,6 @@ def save_tsne_plot(frame, labels, save_to_path):
     plt.savefig(save_to_path)
     plt.close()
 
-
-def explore(measure, output_file):
-    pass
-
 # Parse command line arguments -----------------------------------------------------------------------------------------
 pd.set_option("display.max_rows", 500)
 pd.set_option('display.expand_frame_repr', False)
@@ -138,11 +133,18 @@ if args['extract']:
 elif args['cluster']:
     save_tsne = args['--tsne']
     corr_threshold = args['--corr']
-    print __remove_features_and_cluster__(corr_threshold=float(corr_threshold), save_tsne=save_tsne, measure="some")
-elif args['explore']:
     measure = args['--measure']
-    out = args['--out']
+    frame = __remove_features_and_cluster__(corr_threshold=float(corr_threshold), save_tsne=save_tsne, measure=measure)
 
+    output = args['--out']
+    if output:
+        output = os.path.expanduser(output)
+        write_header = True
+        open_mode = 'w'
+        if os.path.isfile(output):
+            write_header = False
+            open_mode = 'a'
+        frame.to_csv(output, header=write_header, mode=open_mode)
 else:
     print "UNDEFINED COMMAND LINE ARGUMENTS"
     exit(1)
