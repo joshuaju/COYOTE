@@ -5,7 +5,7 @@ import matplotlib.gridspec as gridspec
 from sklearn.manifold import TSNE
 
 
-def get_correlating_features(features, drop_feature=[], corr_threshold=0.9):
+def get_correlating_features(features, corr_threshold, drop_feature=[]):
     ''' Identifies the correlating features. Returns a list of features with a correlation greater or equal
         to the threshold. The correlation is measured as an absolute value, so both positve and negative correlations
         are handled the same way. '''
@@ -18,7 +18,7 @@ def get_correlating_features(features, drop_feature=[], corr_threshold=0.9):
             absolute_corr_value = np.absolute(corr_frame.loc[row_index][col_index])
             if absolute_corr_value >= corr_threshold:
                 drop_feature.append(row_index)
-                return get_correlating_features(features, drop_feature, corr_threshold)
+                return get_correlating_features(features, corr_threshold, drop_feature)
     return drop_feature
 
 

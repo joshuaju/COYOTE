@@ -1,22 +1,65 @@
+"""
+Usage:
+    coyote.py extract <TIMESERIES> <FEATURETABLE>
+    coyote.py cluster [--tsne]
+
+"""
 import feature_extraction
 import feature_analysis
 import clustering
 import dataset_utils
 
+from docopt import docopt
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import sys, os
 
-def run_script():
-    __cluster__()
+
+def __remove_features_and_cluster__(corr_threshold, save_tsne):
+    # load datasets and labels -----------------------------------------------------------------------------------------
+    org_neg_frame, org_neg_labels = dataset_utils.load_org_and_neg_combined_with_labels()
+    util_neg_frame, util_neg_labels = dataset_utils.load_util_and_neg_combined_with_labels()
+    val_frame, val_labels = dataset_utils.load_validation_combined_with_labels()
+    # drop features ----------------------------------------------------------------------------------------------------
+    print "\nCorrelation threshold is set to %s.\n" % corr_threshold
+    dropped_features_org = __drop_features__(org_neg_frame, corr_threshold)
+    val_org = val_frame.drop(dropped_features_org, axis=1)
+    # cluster organisation and negative instances
+    print "Organisation and Negative Instance (%s features dropped)" % len(dropped_features_org)
+    train_and_validate(
+        features=org_neg_frame, true_labels=org_neg_labels,
+        features_validation=val_org, true_labels_validation=val_labels
+    )
+    # cluster utility and negative instances ---------------------------------------------------------------------------
+    print
+    dropped_features_util = __drop_features__(util_neg_frame, corr_threshold)
+    val_util = val_frame.drop(dropped_features_util, axis=1)
+    print "Utility and Negative Instance (%s features dropped)" % len(dropped_features_util)
+    train_and_validate(
+        features=util_neg_frame, true_labels=util_neg_labels,
+        features_validation=val_util, true_labels_validation=val_labels
+    )
+    # save tsne --------------------------------------------------------------------------------------------------------
+    if save_tsne:
+        save_tsne_plot(org_neg_frame, org_neg_labels, 'plots/tsne_org_neg.png')
+        save_tsne_plot(util_neg_frame, util_neg_labels, 'plots/tsne_util_neg.png')
 
 
-def __extract__(path_to_timeseries, path_to_featuretable):
-    path_to_timeseries = os.path.expanduser(sys.argv[1])
-    path_to_featuretable = os.path.expanduser(sys.argv[2])
-    assert os.path.isfile(path_to_timeseries)
-    assert not os.path.isfile(path_to_featuretable)
+def extract_integration_frequency(path_to_timeseries, path_to_featuretable):
+    ''' Extracts features from the specified time-series file and stores them in the specified featuretable file.
+
+        The time-series is expected to be a csv file with the following columns:
+        filename, date, merges, commits, integrations, commiters, integrators
+    '''
+    path_to_timeseries = os.path.expanduser(path_to_timeseries)
+    path_to_featuretable = os.path.expanduser(path_to_featuretable)
+    if not os.path.isfile(path_to_timeseries):
+        print "Path to timeseries file does not exist: %s" % path_to_timeseries
+        exit(1)
+    if os.path.isfile(path_to_featuretable):
+        print "Featuretable already exists: %s" % path_to_featuretable
+        exit(1)
 
     COL_REPO = 0
     COL_DATE = 1
@@ -30,47 +73,38 @@ def __extract__(path_to_timeseries, path_to_featuretable):
     feature_extraction.transform_timeseries_frame_to_featuretable(frame, path_to_featuretable)
 
 
-def __cluster__():
-    CORR_THRESHOLD = 0.85
-    print "\n>>>Note: The correlation threshold is %s. Features greater or equal to this are automatically removed.\n" % CORR_THRESHOLD
-    # load datasets and labels -----------------------------------------------------------------------------------------
-    org_neg_frame, org_neg_labels = dataset_utils.load_org_and_neg_combined_with_labels()
-    util_neg_frame, util_neg_labels = dataset_utils.load_util_and_neg_combined_with_labels()
-    val_frame, val_labels = dataset_utils.load_validation_combined_with_labels()
-    # drop correlating features ----------------------------------------------------------------------------------------
-    drop_org_features = feature_analysis.get_correlating_features(org_neg_frame, corr_threshold=CORR_THRESHOLD)
-    drop_util_features = feature_analysis.get_correlating_features(util_neg_frame, corr_threshold=CORR_THRESHOLD)
-    org_neg_frame.drop(drop_org_features, axis=1, inplace=True)
-    util_neg_frame.drop(drop_util_features, axis=1, inplace=True)
-    print "Removed %s features from the Org&Neg dataset. There are %s features left:" % (
-    len(drop_org_features), len(org_neg_frame.columns))
-    print org_neg_frame.columns.values
-    print "Removed %s features from the Util&Neg dataset. There are %s features left.\n" % (
-    len(drop_util_features), len(util_neg_frame.columns))
-    print util_neg_frame.columns.values
-    # t-SNE plot
-    transformed_org_neg = feature_analysis.tsne(org_neg_frame, n_components=2)
-    transformed_util_neg = feature_analysis.tsne(util_neg_frame, n_components=2)
+def train_and_validate(features, true_labels, features_validation, true_labels_validation):
+    ''' Trains and validates a K-means classifier. Prints results to stdout.'''
+    model = clustering.train(features, true_labels)
+    clustering.validate(model, features_validation, true_labels_validation)
 
-    feature_analysis.scatter_features_in_2d(transformed_org_neg, org_neg_labels, ['x', '.'])
-    plt.savefig('plots/tsne_org_neg.png')
+
+def __drop_features__(frame, corr_threshold):
+    ''' Drops features exceeding the correlatoin threshold permanently from the frame.
+
+        Returns the dropped features (column names)
+    '''
+    to_drop = feature_analysis.get_correlating_features(frame, corr_threshold=corr_threshold)
+    frame.drop(to_drop, axis=1, inplace=True)
+    return to_drop
+
+
+def save_tsne_plot(frame, labels, save_to_path):
+    transformed = feature_analysis.tsne(frame, n_components=2)
+    feature_analysis.scatter_features_in_2d(transformed, labels, ['x', 'o'])
+    plt.savefig(save_to_path)
     plt.close()
-    feature_analysis.scatter_features_in_2d(transformed_util_neg, util_neg_labels, ['x', '.'])
-    plt.savefig('plots/tsne_util_neg.png')
-    plt.close()
-    # Cluster features -------------------------------------------------------------------------------------------------
-    print ">>>Org Training"
-    org_model = clustering.train(org_neg_frame, org_neg_labels)
-    print ">>>Org Validation"
-    #clustering.validate(org_model, val_frame.drop(drop_org_features, axis=1), val_labels)
-    print
-    print ">>>Util Training"
-    util_model = clustering.train(util_neg_frame, util_neg_labels)
-    print ">>>Util Validation"
-    #clustering.validate(util_model, val_frame.drop(drop_util_features, axis=1), val_labels)
 
 
-pd.set_option("display.max_rows", 1000)
-pd.set_option("display.max_columns", 500)
-pd.set_option('display.expand_frame_repr', False)
-run_script()
+# Parse command line arguments -----------------------------------------------------------------------------------------
+args = docopt(__doc__)
+if args['extract']:
+    path_to_timeseries = args['<TIMESERIES>']
+    path_to_featuretable = args['<FEATURETABLE>']
+    extract_integration_frequency(path_to_timeseries, path_to_featuretable)
+elif args['cluster']:
+    save_tsne = args['--tsne']
+    __remove_features_and_cluster__(corr_threshold=0.85, save_tsne=save_tsne)
+else:
+    print "UNDEFINED COMMAND LINE ARGUMENTS"
+    exit(1)

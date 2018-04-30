@@ -19,6 +19,7 @@ def train(features, true_labels):
 
     predicted_labels = __convert_to_string_labels__(cluster_labels, true_labels)
 
+    print "* TRAINING"
     __precision_recall_fscore(true_labels, predicted_labels)
     return model
 
@@ -28,6 +29,7 @@ def validate(model, features, true_labels):
 
     cluster_labels = model.predict(features.as_matrix())
     predicted_labels = __convert_to_string_labels__(cluster_labels, true_labels)
+    print "* VALIDATION"
     __precision_recall_fscore(true_labels, predicted_labels)
 
 
