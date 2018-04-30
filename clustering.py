@@ -8,7 +8,6 @@ import dataset_utils as ds_util
 
 def __normalise__(features):
     assert isinstance(features, pd.DataFrame)
-    # return (features - features.min()) / (features.max() - features.min())
     return (features - features.mean()) / features.std()
 
 
@@ -24,8 +23,10 @@ def run_script():
     drop_util_features = get_correlating_features(util_neg_frame, corr_threshold=CORR_THRESHOLD)
     org_neg_frame.drop(drop_org_features, axis=1, inplace=True)
     util_neg_frame.drop(drop_util_features, axis=1, inplace=True)
-    print "Removed %s features from the Org&Neg dataset. There are %s features left." % (len(drop_org_features), len(org_neg_frame.columns))
+    print "Removed %s features from the Org&Neg dataset. There are %s features left:" % (len(drop_org_features), len(org_neg_frame.columns))
+    print org_neg_frame.columns.values
     print "Removed %s features from the Util&Neg dataset. There are %s features left.\n" % (len(drop_util_features), len(util_neg_frame.columns))
+    print util_neg_frame.columns.values
     # TODO drop features from scatter plot analysis
 
     print ">>>Org Training"
@@ -47,9 +48,7 @@ def train(features, true_labels):
 
     predicted_labels = __convert_to_string_labels__(cluster_labels, true_labels)
 
-    p, r, f, s = precision_recall_fscore_support(y_true=true_labels, y_pred=predicted_labels)
-    print "Precision(P)  = %.2f" % p[0], "\t", "Recall(P)  = %.2f" % r[0], "\t", "F-Measure(P)  = %.2f" % f[0]
-    print "Precision(NP) = %.2f" % p[1], "\t", "Recall(NP) = %.2f" % r[1], "\t", "F-Measure(NP) = %.2f" % f[1]
+    __precision_recall_fscore(true_labels, predicted_labels)
     return model
 
 def validate(model, features, true_labels):
@@ -57,10 +56,15 @@ def validate(model, features, true_labels):
 
     cluster_labels = model.predict(features.as_matrix())
     predicted_labels = __convert_to_string_labels__(cluster_labels, true_labels)
-    p, r, f, s = precision_recall_fscore_support(y_true=true_labels, y_pred=predicted_labels)
-    print "Precision(P)  = %.2f" % p[0], "\t", "Recall(P)  = %.2f" % r[0], "\t", "F-Measure(P)  = %.2f" % f[0]
-    print "Precision(NP) = %.2f" % p[1], "\t", "Recall(NP) = %.2f" % r[1], "\t", "F-Measure(NP) = %.2f" % f[1]
+    __precision_recall_fscore(true_labels, predicted_labels)
 
+
+def __precision_recall_fscore(true_labels, predicted_labels, print_to_stdout=True):
+    p, r, f, s = precision_recall_fscore_support(y_true=true_labels, y_pred=predicted_labels)
+    if print_to_stdout:
+        print "Precision(P)  = %.2f" % p[0], "\t", "Recall(P)  = %.2f" % r[0], "\t", "F-Measure(P)  = %.2f" % f[0]
+        print "Precision(NP) = %.2f" % p[1], "\t", "Recall(NP) = %.2f" % r[1], "\t", "F-Measure(NP) = %.2f" % f[1]
+    return p, r, f
 
 def __convert_to_string_labels__(predicted_labels, true_labels):
     assert len(true_labels.unique()) == 2
