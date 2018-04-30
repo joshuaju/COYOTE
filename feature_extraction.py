@@ -1,18 +1,6 @@
-import sys, os
 import pandas as pd
 import numpy as np
 
-
-def __run_script__(path_to_timeseries, path_to_featuretable):
-    COL_REPO = 0
-    COL_DATE = 1
-    COL_INTEGRATIONS = 4
-    frame = pd.read_csv(
-        path_to_timeseries,
-        index_col=[COL_REPO, COL_DATE], parse_dates=[COL_DATE],
-        usecols=[COL_REPO, COL_DATE, COL_INTEGRATIONS],
-        dtype={'integrations': np.float64}).dropna()
-    transform_timeseries_frame_to_featuretable(frame, path_to_featuretable)
 
 def transform_timeseries_frame_to_featuretable(frame, path_to_featuretable):
     assert isinstance(frame, pd.DataFrame)
@@ -187,17 +175,3 @@ def __extract_gradient_features(timeseries):
             'min_NG': min_NG, 'avg_NG': avg_NG, 'max_NG': max_NG,
             'PG_count': pg_count, 'NG_count': ng_count}
 
-
-# ----------------------------------------------------------------------------------------------------------------------
-assert len(sys.argv) == 3
-path_to_timeseries = os.path.expanduser(sys.argv[1])
-path_to_featuretable = os.path.expanduser(sys.argv[2])
-
-assert os.path.isfile(path_to_timeseries)
-assert not os.path.isfile(path_to_featuretable)
-
-pd.set_option("display.max_rows", 500)
-pd.set_option("display.max_columns", 500)
-pd.set_option('display.expand_frame_repr', False)
-
-__run_script__(path_to_timeseries, path_to_featuretable)

@@ -1,8 +1,8 @@
-import dataset_utils as ds_util
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+from sklearn.manifold import TSNE
 
 
 def get_correlating_features(features, drop_feature=[], corr_threshold=0.9):
@@ -54,7 +54,28 @@ def scatter_plot(features, labels):
     plt.tight_layout(pad=2, h_pad=0, w_pad=0)
 
 
-# ----------------------------------------------------------------------------------------------------------------------
-pd.set_option("display.max_rows", 1000)
-pd.set_option("display.max_columns", 500)
-pd.set_option('display.expand_frame_repr', False)
+
+def tsne(frame, n_components):
+    model = TSNE(n_components=n_components, random_state=0)
+    transformed = model.fit_transform(frame)
+    return pd.DataFrame(transformed, index=frame.index)
+
+def scatter_features_in_2d(features, labels, markers):
+    assert isinstance(features, pd.DataFrame)
+    assert isinstance(labels, pd.Series)
+    assert len(features.columns) == 2
+    assert len(features) == len(labels)
+    assert len(markers) == len(labels.unique())
+
+    fig = plt.figure(figsize=(7, 7))
+    ax = fig.add_subplot(111)
+
+    col0 = features.columns[0]
+    col1 = features.columns[1]
+    for idx, lbl in enumerate(labels.unique()):
+        label_idx = (labels == lbl)
+        m = markers[idx]
+        ax.scatter(features[labels == lbl][col0], features[labels == lbl][col1], marker=m, label=lbl)
+
+    plt.legend(loc='best')
+    plt.tight_layout(pad=3, h_pad=0, w_pad=0)
