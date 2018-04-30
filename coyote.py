@@ -1,7 +1,7 @@
 """
 Usage:
     coyote.py extract <TIMESERIES> <FEATURETABLE> --measure=<MEASURE>
-    coyote.py cluster [--tsne]
+    coyote.py cluster --corr=<THRESHOLD> [--tsne]
 
 """
 import feature_extraction
@@ -106,7 +106,8 @@ if args['extract']:
     extract(path_to_timeseries, path_to_featuretable, measure)
 elif args['cluster']:
     save_tsne = args['--tsne']
-    __remove_features_and_cluster__(corr_threshold=0.85, save_tsne=save_tsne)
+    corr_threshold = args['--corr']
+    __remove_features_and_cluster__(corr_threshold=corr_threshold, save_tsne=save_tsne)
 else:
     print "UNDEFINED COMMAND LINE ARGUMENTS"
     exit(1)
