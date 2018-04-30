@@ -2,7 +2,7 @@
 Usage:
     coyote.py extract <TIMESERIES> <FEATURETABLE> --measure=<MEASURE>
     coyote.py cluster --corr=<THRESHOLD> [--tsne]
-
+    coyote.py explore --measure=<MEASURE> --out=<FILE>
 """
 import feature_extraction
 import feature_analysis
@@ -16,7 +16,8 @@ import numpy as np
 import sys, os
 
 
-def __remove_features_and_cluster__(corr_threshold, save_tsne):
+def __remove_features_and_cluster__(corr_threshold, save_tsne, measure):
+    assert isinstance(corr_threshold, float)
     # load datasets and labels -----------------------------------------------------------------------------------------
     org_neg_frame, org_neg_labels = dataset_utils.load_org_and_neg_combined_with_labels()
     util_neg_frame, util_neg_labels = dataset_utils.load_util_and_neg_combined_with_labels()
@@ -27,7 +28,7 @@ def __remove_features_and_cluster__(corr_threshold, save_tsne):
     val_org = val_frame.drop(dropped_features_org, axis=1)
     # cluster organisation and negative instances
     print "Organisation and Negative Instance (%s features dropped)" % len(dropped_features_org)
-    train_and_validate(
+    org_nan, org_train_p, org_train_r, org_train_f, org_val_p, org_val_r, org_val_f = train_and_validate(
         features=org_neg_frame, true_labels=org_neg_labels,
         features_validation=val_org, true_labels_validation=val_labels
     )
@@ -36,10 +37,33 @@ def __remove_features_and_cluster__(corr_threshold, save_tsne):
     dropped_features_util = __drop_features__(util_neg_frame, corr_threshold)
     val_util = val_frame.drop(dropped_features_util, axis=1)
     print "Utility and Negative Instance (%s features dropped)" % len(dropped_features_util)
-    train_and_validate(
+    util_nan, util_train_p, util_train_r, util_train_f, util_val_p, util_val_r, util_val_f = train_and_validate(
         features=util_neg_frame, true_labels=util_neg_labels,
         features_validation=val_util, true_labels_validation=val_labels
     )
+
+    frame = pd.DataFrame(
+        columns=['measure', 'dataset', 'context', 'threshold', 'label', 'precision', 'recall', 'f-measure', 'dropped'])
+    org_dropped_total = len(dropped_features_org) + len(org_nan)
+    frame.loc[len(frame)] = [measure, "org", "training", corr_threshold, "P", org_train_p[0], org_train_r[0],
+                             org_train_f[0], org_dropped_total]
+    frame.loc[len(frame)] = [measure, "org", "training", corr_threshold, "NP", org_train_p[1], org_train_r[1],
+                             org_train_f[1], org_dropped_total]
+    frame.loc[len(frame)] = [measure, "org", "validation", corr_threshold, "P", org_val_p[0], org_val_r[0],
+                             org_val_f[0], org_dropped_total]
+    frame.loc[len(frame)] = [measure, "org", "validation", corr_threshold, "NP", org_val_p[1], org_val_r[1],
+                             org_val_f[1], org_dropped_total]
+
+    util_dropped_total = len(dropped_features_util) + len(util_nan)
+    frame.loc[len(frame)] = [measure, "util", "training", corr_threshold, "P", util_train_p[0], util_train_r[0],
+                             util_train_f[0], util_dropped_total]
+    frame.loc[len(frame)] = [measure, "util", "training", corr_threshold, "NP", util_train_p[1], util_train_r[1],
+                             util_train_f[1], util_dropped_total]
+    frame.loc[len(frame)] = [measure, "util", "validation", corr_threshold, "P", util_val_p[0], util_val_r[0],
+                             util_val_f[0], util_dropped_total]
+    frame.loc[len(frame)] = [measure, "util", "validation", corr_threshold, "NP", util_val_p[1], util_val_r[1],
+                             util_val_f[1], util_dropped_total]
+    return np.round(frame, decimals=2)
     # save tsne --------------------------------------------------------------------------------------------------------
     if save_tsne:
         save_tsne_plot(org_neg_frame, org_neg_labels, 'plots/tsne_org_neg.png')
@@ -69,15 +93,17 @@ def extract(path_to_timeseries, path_to_featuretable, measure):
         path_to_timeseries,
         index_col=[COL_REPO, COL_DATE], parse_dates=[COL_DATE],
         usecols=[COL_REPO, COL_DATE, COL_MEASURE],
-        #dtype={COL_MEASURE: np.float64}
+        # dtype={COL_MEASURE: np.float64}
     ).dropna()
     feature_extraction.transform_timeseries_frame_to_featuretable(frame, path_to_featuretable, measure=COL_MEASURE)
 
 
 def train_and_validate(features, true_labels, features_validation, true_labels_validation):
     ''' Trains and validates a K-means classifier. Prints results to stdout.'''
-    model, nan_columns = clustering.train(features, true_labels)
-    clustering.validate(model, features_validation.drop(nan_columns, axis=1), true_labels_validation)
+    model, nan_columns, train_p, train_r, train_f = clustering.train(features, true_labels)
+    val_p, val_r, val_f = clustering.validate(model, features_validation.drop(nan_columns, axis=1),
+                                              true_labels_validation)
+    return nan_columns, train_p, train_r, train_f, val_p, val_r, val_f
 
 
 def __drop_features__(frame, corr_threshold):
@@ -97,7 +123,12 @@ def save_tsne_plot(frame, labels, save_to_path):
     plt.close()
 
 
+def explore(measure, output_file):
+    pass
+
 # Parse command line arguments -----------------------------------------------------------------------------------------
+pd.set_option("display.max_rows", 500)
+pd.set_option('display.expand_frame_repr', False)
 args = docopt(__doc__)
 if args['extract']:
     path_to_timeseries = args['<TIMESERIES>']
@@ -107,7 +138,11 @@ if args['extract']:
 elif args['cluster']:
     save_tsne = args['--tsne']
     corr_threshold = args['--corr']
-    __remove_features_and_cluster__(corr_threshold=corr_threshold, save_tsne=save_tsne)
+    print __remove_features_and_cluster__(corr_threshold=float(corr_threshold), save_tsne=save_tsne, measure="some")
+elif args['explore']:
+    measure = args['--measure']
+    out = args['--out']
+
 else:
     print "UNDEFINED COMMAND LINE ARGUMENTS"
     exit(1)

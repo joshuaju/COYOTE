@@ -23,8 +23,8 @@ def train(features, true_labels):
     predicted_labels = __convert_to_string_labels__(cluster_labels, true_labels)
 
     print "* TRAINING"
-    __precision_recall_fscore(true_labels, predicted_labels)
-    return model, nan_columns
+    p, r, f = __precision_recall_fscore(true_labels, predicted_labels)
+    return model, nan_columns, p, r, f
 
 
 def validate(model, features, true_labels):
@@ -33,7 +33,8 @@ def validate(model, features, true_labels):
     cluster_labels = model.predict(features.as_matrix())
     predicted_labels = __convert_to_string_labels__(cluster_labels, true_labels)
     print "* VALIDATION"
-    __precision_recall_fscore(true_labels, predicted_labels)
+    p, r, f = __precision_recall_fscore(true_labels, predicted_labels)
+    return p, r, f
 
 
 def __precision_recall_fscore(true_labels, predicted_labels, print_to_stdout=True):
