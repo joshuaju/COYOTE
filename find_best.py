@@ -4,11 +4,15 @@ import numpy as np
 
 def walk_measures(df):
     for key, series in df.groupby('measure'):
-        print "Measure: ", key
+        print ">>>Measure: ", key
         series = series.drop('measure', axis=1)
 
         training = series[series.context == 'training']
         validation = series[series.context == 'validation']
+
+        find_best(validation[validation.dataset == 'org'])
+        find_best(validation[validation.dataset == 'util'])
+        continue
 
         fig, ax = plt.subplots(1, 2, sharex=True, sharey=False)
         ax[0].set_title('Training')
@@ -25,6 +29,16 @@ def walk_measures(df):
         plt.suptitle("%s: %s" % ("Util", key))
 
     plt.show()
+
+def find_best(frame):
+    frame = frame[frame.fmeasure == frame.fmeasure.max()]
+    frame = frame[frame.precision == frame.precision.max()]
+    frame = frame[frame.recall == frame.recall.max()]
+    frame = frame[frame.threshold == frame.threshold.min()]
+    print frame
+
+
+
 
 def accuracy_plot(ax, frame):
     frame.plot(kind='scatter', x='threshold', y='precision', ax=ax, color='r', alpha=0.5, label='Precision')
