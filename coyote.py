@@ -14,6 +14,22 @@ import pandas as pd
 import numpy as np
 import sys, os
 
+def cluster_train(features, true_labels, corr_threshold):
+    dropped_features = __drop_features__(features, corr_threshold)
+    scaler = clustering.get_scaler(features)
+    scaled_features = clustering.scale_data(features, scaler)
+    model, accuracy = clustering.train(scaled_features, true_labels)
+    return model, scaler, dropped_features, accuracy
+
+def cluster_validate(features, true_labels, to_drop, scaler, model):
+    scaled_features = clustering.scale_data(features.drop(to_drop, axis=1), scaler)
+    accuracy = clustering.validate(model, scaled_features, true_labels)
+    return accuracy
+
+def cluster_predict(features, to_drop, scaler, model):
+    scaled_features = clustering.scale_data(features.drop(to_drop, axis=1), scaler)
+    labels = clustering.predict(scaled_features, model)
+    return labels
 
 def __remove_features_and_cluster__(corr_threshold, save_tsne, measure):
     assert isinstance(corr_threshold, float)
