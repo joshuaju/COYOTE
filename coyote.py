@@ -1,6 +1,6 @@
 """
 Usage:
-    coyote.py extract <TIMESERIES> <FEATURETABLE> --measure=<MEASURE>
+    coyote.py extract <TIMESERIES> <FEATURETABLE>
     coyote.py cluster --corr=<THRESHOLD> --measure=<MEASURE> [--out=<FILE>] [--tsne]
 """
 import feature_extraction
@@ -71,7 +71,7 @@ def __remove_features_and_cluster__(corr_threshold, save_tsne, measure):
         save_tsne_plot(util_neg_frame, util_neg_labels, 'plots/tsne_util_neg.png')
 
 
-def extract(path_to_timeseries, path_to_featuretable, measure):
+def extract(path_to_timeseries, path_to_featuretable):
     ''' Extracts features from the specified time-series file and stores them in the specified featuretable file.
 
         The time-series is expected to be a csv file with the following columns:
@@ -86,17 +86,13 @@ def extract(path_to_timeseries, path_to_featuretable, measure):
         print "Featuretable already exists: %s" % path_to_featuretable
         exit(1)
 
+    measures = ["integrations", "integrators", "commits", "commiters", "merges"]
     COL_REPO = 'filename'
     COL_DATE = 'date'
-    COL_MEASURE = measure
 
-    frame = pd.read_csv(
-        path_to_timeseries,
-        index_col=[COL_REPO, COL_DATE], parse_dates=[COL_DATE],
-        usecols=[COL_REPO, COL_DATE, COL_MEASURE],
-        # dtype={COL_MEASURE: np.float64}
-    ).dropna()
-    feature_extraction.transform_timeseries_frame_to_featuretable(frame, path_to_featuretable, measure=COL_MEASURE)
+    timeseries = pd.read_csv(path_to_timeseries, index_col=[COL_REPO, COL_DATE], parse_dates=[COL_DATE])
+    for COL_MEASURE in measures:
+        feature_extraction.transform_timeseries_frame_to_featuretable(timeseries[COL_MEASURE].dropna(), path_to_featuretable, measure=COL_MEASURE)
 
 
 def train_and_validate(features, true_labels, features_validation, true_labels_validation):
@@ -140,8 +136,7 @@ args = docopt(__doc__)
 if args['extract']:
     path_to_timeseries = args['<TIMESERIES>']
     path_to_featuretable = args['<FEATURETABLE>']
-    measure = args['--measure']
-    extract(path_to_timeseries, path_to_featuretable, measure)
+    extract(path_to_timeseries, path_to_featuretable)
 elif args['cluster']:
     save_tsne = args['--tsne']
     corr_threshold = args['--corr']
