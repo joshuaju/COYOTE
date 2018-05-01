@@ -27,7 +27,8 @@ def __remove_features_and_cluster__(corr_threshold, save_tsne, measure):
     val_org = val_frame.drop(dropped_features_org, axis=1)
     # cluster organisation and negative instances
     print "Organisation and Negative Instance (%s features dropped)" % len(dropped_features_org)
-    org_nan, org_train_p, org_train_r, org_train_f, org_val_p, org_val_r, org_val_f = train_and_validate(
+    org_nan = [] # TODO remove
+    org_train_p, org_train_r, org_train_f, org_val_p, org_val_r, org_val_f = train_and_validate(
         features=org_neg_frame, true_labels=org_neg_labels,
         features_validation=val_org, true_labels_validation=val_labels
     )
@@ -36,7 +37,8 @@ def __remove_features_and_cluster__(corr_threshold, save_tsne, measure):
     dropped_features_util = __drop_features__(util_neg_frame, corr_threshold)
     val_util = val_frame.drop(dropped_features_util, axis=1)
     print "Utility and Negative Instance (%s features dropped)" % len(dropped_features_util)
-    util_nan, util_train_p, util_train_r, util_train_f, util_val_p, util_val_r, util_val_f = train_and_validate(
+    util_nan = [] # TODO remove
+    util_train_p, util_train_r, util_train_f, util_val_p, util_val_r, util_val_f = train_and_validate(
         features=util_neg_frame, true_labels=util_neg_labels,
         features_validation=val_util, true_labels_validation=val_labels
     )
@@ -99,10 +101,20 @@ def extract(path_to_timeseries, path_to_featuretable, measure):
 
 def train_and_validate(features, true_labels, features_validation, true_labels_validation):
     ''' Trains and validates a K-means classifier. Prints results to stdout.'''
-    model, nan_columns, train_p, train_r, train_f = clustering.train(features, true_labels)
-    val_p, val_r, val_f = clustering.validate(model, features_validation.drop(nan_columns, axis=1),
-                                              true_labels_validation)
-    return nan_columns, train_p, train_r, train_f, val_p, val_r, val_f
+
+    scaler = clustering.get_scaler(features)
+
+    scaled_features = clustering.scale_data(features, scaler)
+    scaled_features_validation = clustering.scale_data(features_validation, scaler)
+
+    assert len(features.columns) == (scaled_features.shape[1])
+    assert len(features_validation.columns) == (scaled_features_validation.shape[1])
+
+
+
+    model, train_p, train_r, train_f = clustering.train(scaled_features, true_labels)
+    val_p, val_r, val_f = clustering.validate(model, scaled_features_validation, true_labels_validation)
+    return train_p, train_r, train_f, val_p, val_r, val_f
 
 
 def __drop_features__(frame, corr_threshold):

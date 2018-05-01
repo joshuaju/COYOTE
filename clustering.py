@@ -1,36 +1,37 @@
 from sklearn.metrics import precision_recall_fscore_support
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
 from sklearn import cluster
-from feature_analysis import get_correlating_features
 import pandas as pd
-import numpy as np
-import dataset_utils as ds_util
 
+def get_scaler(data):
+    scaler = StandardScaler()
+    #scaler = MinMaxScaler()
+    #scaler = MaxAbsScaler()
+    scaler = scaler.fit(data)
+    return scaler
 
-def __normalise__(features):
-    assert isinstance(features, pd.DataFrame)
-    return (features - features.mean()) / features.std()
-
+def scale_data(data, scaler):
+    return scaler.transform(data)
 
 def train(features, true_labels):
-    features = __normalise__(features)
     # after normalisation there can be NaN values, which have to be removed/replaced.
-    nan_columns = features.columns[features.isna().any()].tolist()
-    features = features.drop(nan_columns, axis=1)
 
-    model = cluster.KMeans(n_clusters=2, init='k-means++', n_init=10, max_iter=300).fit(features.as_matrix())
+    # TODO remove
+    # nan_columns = features.columns[features.isna().any()].tolist()
+    #features = features.drop(nan_columns, axis=1)
+
+    model = cluster.KMeans(n_clusters=2, init='k-means++', n_init=10, max_iter=300).fit(features)
     cluster_labels = model.labels_
 
     predicted_labels = __convert_to_string_labels__(cluster_labels, true_labels)
 
     print "* TRAINING"
     p, r, f = __precision_recall_fscore(true_labels, predicted_labels)
-    return model, nan_columns, p, r, f
+    return model, p, r, f
 
 
 def validate(model, features, true_labels):
-    features = __normalise__(features)
-
-    cluster_labels = model.predict(features.as_matrix())
+    cluster_labels = model.predict(features)
     predicted_labels = __convert_to_string_labels__(cluster_labels, true_labels)
     print "* VALIDATION"
     p, r, f = __precision_recall_fscore(true_labels, predicted_labels)
