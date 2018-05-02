@@ -15,6 +15,29 @@ import numpy as np
 import sys, os
 
 
+# ----------------------------------------------------------------------------------------------------------------------
+class ClusterPipelineOutput():
+    def __init__(self, model, scaler, dropped_features, accuracy_frame):
+        self.model = model
+        self.scaler = scaler
+        self.dropped_features = dropped_features
+        self.accuracy_frame = accuracy_frame
+
+    def get_model(self):
+        return self.model
+
+    def get_scaler(self):
+        return self.scaler
+
+    def get_dropped_features(self):
+        return self.dropped_features
+
+    def get_accuracy_frame(self):
+        return self.accuracy_frame
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
 def cluster_train(features, true_labels, corr_threshold):
     assert len(features) == len(true_labels)
     features, dropped_features = __drop_features__(features, corr_threshold)
@@ -36,36 +59,17 @@ def cluster_predict(features, to_drop, scaler, model):
     return labels
 
 
-class ClusterPipelineOutput():
-    def __init__(self, model, scaler, dropped_features, accuracy_frame):
-        self.model = model
-        self.scaler = scaler
-        self.dropped_features = dropped_features
-        self.accuracy_frame = accuracy_frame
-
-    def get_model(self):
-        return self.model
-
-    def get_scaler(self):
-        return self.scaler
-
-    def get_dropped_features(self):
-        return self.dropped_features
-
-    def get_accuracy_frame(self):
-        return self.accuracy_frame
-
-
 def cluster_pipeline(dataset, validate, corr_threshold):
     assert dataset in [dataset_utils.DATASET_ORG, dataset_utils.DATASET_UTIL]
     assert isinstance(validate, bool)
     assert isinstance(corr_threshold, float)
-    accuracy_frame = clustering.create_accuracy_frame()
+
 
     all_measures, all_labels = dataset_utils.load_dataset(dataset)
     result_map = {}
-    for measure in all_measures.index.levels[1].unique():
-        print "*** ", measure, " ***"
+    measure_names = all_measures.index.levels[1].unique()  # level[1] is the 'measure' column
+    for measure in measure_names:
+        accuracy_frame = clustering.create_accuracy_frame()
         features = all_measures.xs(measure, level='measure')
         labels = all_labels.xs(measure, level='measure')
         model, scaler, dropped_features, training_accuracy = cluster_train(features, labels, corr_threshold)
@@ -76,7 +80,8 @@ def cluster_pipeline(dataset, validate, corr_threshold):
         )
 
         if validate:
-            all_measures_validation, all_labels_validation = dataset_utils.load_dataset(dataset_utils.DATASET_VALIDATION)
+            all_measures_validation, all_labels_validation = dataset_utils.load_dataset(
+                dataset_utils.DATASET_VALIDATION)
             features = all_measures_validation.xs(measure, level='measure')
             labels = all_labels_validation.xs(measure, level='measure')
             validation_accuracy = cluster_validate(features, labels, dropped_features, scaler, model)
@@ -130,7 +135,7 @@ def train_and_validate(features, true_labels, features_validation, true_labels_v
 
 
 def __drop_features__(frame, corr_threshold):
-    ''' Drops features exceeding the correlatoin threshold permanently from the frame.
+    ''' Drops features exceeding the correlation threshold permanently from the frame.
 
         Returns the dropped features (column names)
     '''
@@ -155,11 +160,12 @@ if args['extract']:
     extract(path_to_timeseries, path_to_featuretable)
 elif args['cluster']:
     corr_threshold = float(args['--corr'])
-    measure = args['--measure']
 
     results_org = cluster_pipeline(dataset_utils.DATASET_ORG, validate=True, corr_threshold=corr_threshold)
     results_util = cluster_pipeline(dataset_utils.DATASET_UTIL, validate=True, corr_threshold=corr_threshold)
 
+    for key in results_org:
+        print results_org[key].get_accuracy_frame(), "\n"
     output = args['--out']
     if output:
         output = os.path.expanduser(output)
@@ -169,8 +175,8 @@ elif args['cluster']:
             write_header = False
             open_mode = 'a'
         # TODO
-        #frame = pd.concat([accuracy_frame_org, accuracy_frame_util])
-        #frame.to_csv(output, header=write_header, mode=open_mode)
+        # frame = pd.concat([accuracy_frame_org, accuracy_frame_util])
+        # frame.to_csv(output, header=write_header, mode=open_mode)
 else:
     print "UNDEFINED COMMAND LINE ARGUMENTS"
     exit(1)

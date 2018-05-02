@@ -61,7 +61,6 @@ def train(features, true_labels):
 
     predicted_labels = __convert_to_string_labels__(cluster_labels, true_labels)
 
-    print "* TRAINING"
     p, r, f = __precision_recall_fscore(true_labels, predicted_labels)
     return model, Accuracy(p, r, f)
 
@@ -69,7 +68,6 @@ def train(features, true_labels):
 def validate(model, features, true_labels):
     cluster_labels = model.predict(features)
     predicted_labels = __convert_to_string_labels__(cluster_labels, true_labels)
-    print "* VALIDATION"
     p, r, f = __precision_recall_fscore(true_labels, predicted_labels)
     return Accuracy(p, r, f)
 
@@ -79,11 +77,8 @@ def predict(features, model):
     return cluster_labels
 
 
-def __precision_recall_fscore(true_labels, predicted_labels, print_to_stdout=True):
+def __precision_recall_fscore(true_labels, predicted_labels):
     p, r, f, s = precision_recall_fscore_support(y_true=true_labels, y_pred=predicted_labels)
-    if print_to_stdout:
-        print "Precision(P)  = %.2f" % p[0], "\t", "Recall(P)  = %.2f" % r[0], "\t", "F-Measure(P)  = %.2f" % f[0]
-        print "Precision(NP) = %.2f" % p[1], "\t", "Recall(NP) = %.2f" % r[1], "\t", "F-Measure(NP) = %.2f" % f[1]
     return p, r, f
 
 
