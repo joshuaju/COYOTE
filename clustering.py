@@ -23,7 +23,7 @@ class Accuracy:
 
 def create_accuracy_frame():
     return pd.DataFrame(
-        columns=['measure', 'dataset', 'context', 'threshold', 'label', 'precision', 'recall', 'f-measure', 'dropped']
+        columns=['measure', 'dataset', 'context', 'threshold', 'label', 'precision', 'recall', 'fmeasure', 'dropped']
     )
 
 def append_to_accuracy_frame(frame, accuracy, measure, dataset, context, corr_threshold, dropped):

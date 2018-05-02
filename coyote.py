@@ -1,18 +1,21 @@
 """
 Usage:
     coyote.py extract <TIMESERIES> <FEATURETABLE>
-    coyote.py cluster --corr=<THRESHOLD> [--out=<FILE>]
+    coyote.py cluster --config=<FILE> [--out=<FILE>]
+    coyote.py explore --explore=<FILE> --config=<File>
 """
 import feature_extraction
 import feature_analysis
 import clustering
 import dataset_utils
+import config_generator
 
 from docopt import docopt
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import sys, os
+import subprocess
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -59,17 +62,19 @@ def cluster_predict(features, to_drop, scaler, model):
     return labels
 
 
-def cluster_pipeline(dataset, validate, corr_threshold):
+def cluster_pipeline(dataset, validate, config):
     assert dataset in [dataset_utils.DATASET_ORG, dataset_utils.DATASET_UTIL]
     assert isinstance(validate, bool)
-    assert isinstance(corr_threshold, float)
-
 
     all_measures, all_labels = dataset_utils.load_dataset(dataset)
     result_map = {}
     measure_names = all_measures.index.levels[1].unique()  # level[1] is the 'measure' column
     for measure in measure_names:
         accuracy_frame = clustering.create_accuracy_frame()
+
+        corr_threshold = config[dataset][measure]
+        assert not corr_threshold == None
+
         features = all_measures.xs(measure, level='measure')
         labels = all_labels.xs(measure, level='measure')
         model, scaler, dropped_features, training_accuracy = cluster_train(features, labels, corr_threshold)
@@ -159,10 +164,12 @@ if args['extract']:
     path_to_featuretable = args['<FEATURETABLE>']
     extract(path_to_timeseries, path_to_featuretable)
 elif args['cluster']:
-    corr_threshold = float(args['--corr'])
-
-    results_org = cluster_pipeline(dataset_utils.DATASET_ORG, validate=True, corr_threshold=corr_threshold)
-    results_util = cluster_pipeline(dataset_utils.DATASET_UTIL, validate=True, corr_threshold=corr_threshold)
+    config_path = os.path.expanduser(args['--config'])
+    import json
+    with open(config_path, 'r') as config_file:
+        config = json.load(config_file)
+    results_org = cluster_pipeline(dataset=dataset_utils.DATASET_ORG, validate=True, config=config)
+    results_util = cluster_pipeline(dataset=dataset_utils.DATASET_UTIL, validate=True, config=config)
 
     output = args['--out']
     if output:
@@ -178,6 +185,15 @@ elif args['cluster']:
         for key in results_util:
             frames.append(results_util[key].get_accuracy_frame())
         pd.concat(frames, ignore_index=True).to_csv(output, header=write_header, mode=open_mode)
+elif args['explore']:
+    out_explore = os.path.expanduser(args['--explore'])
+    out_config = os.path.expanduser(args['--config'])
+
+    if not os.path.isfile(out_explore):
+        subprocess.call(['./explore.sh', out_explore])
+
+    config_generator.generate_config_from_exploratoin_file(out_explore, out_config)
+
 else:
     print "UNDEFINED COMMAND LINE ARGUMENTS"
     exit(1)
