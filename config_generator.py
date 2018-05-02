@@ -26,8 +26,8 @@ def walk_measures(df, make_plots=False):
         best_org = find_best(validation[validation.dataset == 'org'])
         best_util = find_best(validation[validation.dataset == 'util'])
 
-        config[DATASET_ORG][measure] = "%.2f" % best_org
-        config[DATASET_UTIL][measure] = "%.2f" % best_util
+        config[DATASET_ORG][measure] = float("%.2f" % best_org)
+        config[DATASET_UTIL][measure] = float("%.2f" % best_util)
 
         if make_plots:
             fig, ax = plt.subplots(1, 2, sharex=True, sharey=False)
