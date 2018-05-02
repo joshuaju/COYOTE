@@ -57,9 +57,20 @@ def cluster_validate(features, true_labels, to_drop, scaler, model):
 
 
 def cluster_predict(features, to_drop, scaler, model):
-    scaled_features = clustering.scale_data(features.drop(to_drop, axis=1), scaler)
+    features = features.drop(to_drop, axis=1)
+    print len(features.columns)
+    scaled_features = clustering.scale_data(features, scaler)
     labels = clustering.predict(scaled_features, model)
     return labels
+
+def prediction_pipeline(features, cluster_pipeline_output_map):
+    for measure in cluster_pipeline_output_map:
+        results = cluster_pipeline_output_map[measure]
+        print "Predicting for %s..." % measure
+        labels = cluster_predict(features=features, to_drop=results.get_dropped_features(),
+                                 scaler=results.get_scaler(), model=results.get_model())
+        print labels, "\n***\n"
+    print "\nDone"
 
 
 def cluster_pipeline(dataset, validate, config):
@@ -72,16 +83,17 @@ def cluster_pipeline(dataset, validate, config):
     for measure in measure_names:
         accuracy_frame = clustering.create_accuracy_frame()
 
-        corr_threshold = config[dataset][measure]
-        assert not corr_threshold == None
+
+        threshold = config[dataset][measure]
+        assert not threshold == None
 
         features = all_measures.xs(measure, level='measure')
         labels = all_labels.xs(measure, level='measure')
-        model, scaler, dropped_features, training_accuracy = cluster_train(features, labels, corr_threshold)
+        model, scaler, dropped_features, training_accuracy = cluster_train(features, labels, threshold)
         clustering.append_to_accuracy_frame(
             frame=accuracy_frame, accuracy=training_accuracy,
             measure=measure, dataset=dataset, context="training",
-            corr_threshold=corr_threshold, dropped=len(dropped_features)
+            corr_threshold=threshold, dropped=len(dropped_features)
         )
 
         if validate:
@@ -92,7 +104,7 @@ def cluster_pipeline(dataset, validate, config):
             validation_accuracy = cluster_validate(features, labels, dropped_features, scaler, model)
             clustering.append_to_accuracy_frame(frame=accuracy_frame, accuracy=validation_accuracy,
                                                 measure=measure, dataset=dataset, context="validation",
-                                                corr_threshold=corr_threshold, dropped=len(dropped_features)
+                                                corr_threshold=threshold, dropped=len(dropped_features)
                                                 )
         result_map[measure] = ClusterPipelineOutput(model, scaler, dropped_features, accuracy_frame)
     return result_map
@@ -170,7 +182,11 @@ elif args['cluster']:
         config = json.load(config_file)
     results_org = cluster_pipeline(dataset=dataset_utils.DATASET_ORG, validate=True, config=config)
     results_util = cluster_pipeline(dataset=dataset_utils.DATASET_UTIL, validate=True, config=config)
-
+    #
+    #print "Loading features..."
+    #features_18M, _ = dataset_utils.load_dataset(dataset_utils.DATASET_VALIDATION)
+    #prediction_pipeline(features=features_18M, cluster_pipeline_output_map=results_util)
+    #
     output = args['--out']
     if output:
         output = os.path.expanduser(output)
@@ -185,12 +201,27 @@ elif args['cluster']:
         for key in results_util:
             frames.append(results_util[key].get_accuracy_frame())
         pd.concat(frames, ignore_index=True).to_csv(output, header=write_header, mode=open_mode)
+
+
+
+    #print ",.,.,.,."
+
 elif args['explore']:
+    import json
     out_explore = os.path.expanduser(args['--explore'])
     out_config = os.path.expanduser(args['--config'])
 
-    if not os.path.isfile(out_explore):
-        subprocess.call(['./explore.sh', out_explore])
+    thresholds = np.arange(0.05, 1.01, 0.05)
+    for threshold in thresholds:
+        config_map = {'util': {}, 'org': {}}
+        for k1 in config_map:
+            for k2 in ['merges', 'commits', 'commiters', 'integrations', 'integrators']:
+                config_map[k1][k2] = threshold
+            with open('.tmp_config.json', 'w') as tmp_config:
+                json.dump(config_map, tmp_config)
+        subprocess.call(['python', 'coyote.py', 'cluster', '--config=.tmp_config.json', '--out=%s' % out_explore])
+
+    subprocess.call(['rm', '.tmp_config.json'])
 
     config_generator.generate_config_from_exploratoin_file(out_explore, out_config)
 

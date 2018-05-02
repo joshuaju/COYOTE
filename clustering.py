@@ -56,7 +56,7 @@ def train(features, true_labels):
     # nan_columns = features.columns[features.isna().any()].tolist()
     # features = features.drop(nan_columns, axis=1)
 
-    model = cluster.KMeans(n_clusters=2, init='k-means++', n_init=10, max_iter=300).fit(features)
+    model = cluster.KMeans(n_clusters=2, init='k-means++', n_init=10, max_iter=300, random_state=10).fit(features)
     cluster_labels = model.labels_
 
     predicted_labels = __convert_to_string_labels__(cluster_labels, true_labels)

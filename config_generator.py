@@ -26,8 +26,8 @@ def walk_measures(df, make_plots=False):
         best_org = find_best(validation[validation.dataset == 'org'])
         best_util = find_best(validation[validation.dataset == 'util'])
 
-        config[DATASET_ORG][measure] = best_org
-        config[DATASET_UTIL][measure] = best_util
+        config[DATASET_ORG][measure] = "%.2f" % best_org
+        config[DATASET_UTIL][measure] = "%.2f" % best_util
 
         if make_plots:
             fig, ax = plt.subplots(1, 2, sharex=True, sharey=False)
@@ -52,6 +52,7 @@ def find_best(frame):
     frame = frame[frame.precision == frame.precision.max()]
     frame = frame[frame.recall == frame.recall.max()]
     frame = frame[frame.threshold == frame.threshold.min()]
+    print frame
     return frame.threshold.values[0]
 
 

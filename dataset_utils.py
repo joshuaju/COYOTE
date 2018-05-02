@@ -3,15 +3,18 @@ import pandas as pd
 DATASET_ORG = 'org'
 DATASET_UTIL = 'util'
 DATASET_VALIDATION = 'val'
+DATASET_18M = 'data18M'
 
 def load_dataset(dataset):
-    assert dataset in [DATASET_ORG, DATASET_UTIL, DATASET_VALIDATION]
+    assert dataset in [DATASET_ORG, DATASET_UTIL, DATASET_VALIDATION, DATASET_18M]
     if dataset == DATASET_ORG:
         return load_org_and_neg_combined_with_labels()
     elif dataset == DATASET_UTIL:
         return load_util_and_neg_combined_with_labels()
     elif dataset == DATASET_VALIDATION:
         return load_validation_combined_with_labels()
+    elif dataset == DATASET_18M:
+        return load_18M()
 
 def load_org_and_neg_combined_with_labels():
     org, org_labels = load_organisation()
@@ -39,6 +42,9 @@ def load_validation_combined_with_labels():
     del val_p, val_np, val_p_labels, val_np_labels
     return val_frame, val_labels
 
+def load_18M():
+    features, _ = __load_feature_table_and_labels("featuretable/features_18M.csv", label="-")
+    return features
 
 def load_organisation(path="featuretable/features_org.csv", label="P"):
     return __load_feature_table_and_labels(path, label)
