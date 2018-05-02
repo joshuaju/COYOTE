@@ -1,7 +1,7 @@
 """
 Usage:
     coyote.py extract <TIMESERIES> <FEATURETABLE>
-    coyote.py cluster --corr=<THRESHOLD> --measure=<MEASURE> [--out=<FILE>]
+    coyote.py cluster --corr=<THRESHOLD> [--out=<FILE>]
 """
 import feature_extraction
 import feature_analysis
@@ -86,58 +86,6 @@ def cluster_pipeline(dataset, validate, corr_threshold):
                                                 )
         result_map[measure] = ClusterPipelineOutput(model, scaler, dropped_features, accuracy_frame)
     return result_map
-
-
-def __remove_features_and_cluster__(corr_threshold, measure):
-    assert isinstance(corr_threshold, float)
-    # load datasets and labels -----------------------------------------------------------------------------------------
-    org_neg_frame, org_neg_labels = dataset_utils.load_org_and_neg_combined_with_labels()
-    util_neg_frame, util_neg_labels = dataset_utils.load_util_and_neg_combined_with_labels()
-    val_frame, val_labels = dataset_utils.load_validation_combined_with_labels()
-    # drop features ----------------------------------------------------------------------------------------------------
-    print "\nCorrelation threshold is set to %s.\n" % corr_threshold
-    _, dropped_features_org = __drop_features__(org_neg_frame, corr_threshold)
-    val_org = val_frame.drop(dropped_features_org, axis=1)
-    # cluster organisation and negative instances
-    print "Organisation and Negative Instance (%s features dropped)" % len(dropped_features_org)
-    org_nan = []  # TODO remove
-    org_train_p, org_train_r, org_train_f, org_val_p, org_val_r, org_val_f = train_and_validate(
-        features=org_neg_frame, true_labels=org_neg_labels,
-        features_validation=val_org, true_labels_validation=val_labels
-    )
-    # cluster utility and negative instances ---------------------------------------------------------------------------
-    print
-    _, dropped_features_util = __drop_features__(util_neg_frame, corr_threshold)
-    val_util = val_frame.drop(dropped_features_util, axis=1)
-    print "Utility and Negative Instance (%s features dropped)" % len(dropped_features_util)
-    util_nan = []  # TODO remove
-    util_train_p, util_train_r, util_train_f, util_val_p, util_val_r, util_val_f = train_and_validate(
-        features=util_neg_frame, true_labels=util_neg_labels,
-        features_validation=val_util, true_labels_validation=val_labels
-    )
-
-    frame = pd.DataFrame(
-        columns=['measure', 'dataset', 'context', 'threshold', 'label', 'precision', 'recall', 'f-measure', 'dropped'])
-    org_dropped_total = len(dropped_features_org) + len(org_nan)
-    frame.loc[len(frame)] = [measure, "org", "training", corr_threshold, "P", org_train_p[0], org_train_r[0],
-                             org_train_f[0], org_dropped_total]
-    frame.loc[len(frame)] = [measure, "org", "training", corr_threshold, "NP", org_train_p[1], org_train_r[1],
-                             org_train_f[1], org_dropped_total]
-    frame.loc[len(frame)] = [measure, "org", "validation", corr_threshold, "P", org_val_p[0], org_val_r[0],
-                             org_val_f[0], org_dropped_total]
-    frame.loc[len(frame)] = [measure, "org", "validation", corr_threshold, "NP", org_val_p[1], org_val_r[1],
-                             org_val_f[1], org_dropped_total]
-
-    util_dropped_total = len(dropped_features_util) + len(util_nan)
-    frame.loc[len(frame)] = [measure, "util", "training", corr_threshold, "P", util_train_p[0], util_train_r[0],
-                             util_train_f[0], util_dropped_total]
-    frame.loc[len(frame)] = [measure, "util", "training", corr_threshold, "NP", util_train_p[1], util_train_r[1],
-                             util_train_f[1], util_dropped_total]
-    frame.loc[len(frame)] = [measure, "util", "validation", corr_threshold, "P", util_val_p[0], util_val_r[0],
-                             util_val_f[0], util_dropped_total]
-    frame.loc[len(frame)] = [measure, "util", "validation", corr_threshold, "NP", util_val_p[1], util_val_r[1],
-                             util_val_f[1], util_dropped_total]
-    return np.round(frame, decimals=2)
 
 
 def extract(path_to_timeseries, path_to_featuretable):
