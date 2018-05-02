@@ -1,5 +1,17 @@
 import pandas as pd
 
+DATASET_ORG = 'org'
+DATASET_UTIL = 'util'
+DATASET_VALIDATION = 'val'
+
+def load_dataset(dataset):
+    assert dataset in [DATASET_ORG, DATASET_UTIL, DATASET_VALIDATION]
+    if dataset == DATASET_ORG:
+        return load_org_and_neg_combined_with_labels()
+    elif dataset == DATASET_UTIL:
+        return load_util_and_neg_combined_with_labels()
+    elif dataset == DATASET_VALIDATION:
+        return load_validation_combined_with_labels()
 
 def load_org_and_neg_combined_with_labels():
     org, org_labels = load_organisation()
@@ -48,7 +60,7 @@ def load_validation_non_projects(path="featuretable/features_val_np.csv", label=
     return __load_feature_table_and_labels(path, label)
 
 
-def __load_feature_table_and_labels(path, label, index_col=0, fillna_with=0):
+def __load_feature_table_and_labels(path, label, index_col=[0, 1], fillna_with=0):
     features = pd.read_csv(path, index_col=index_col).fillna(fillna_with)
     labels = pd.Series(label, index=features.index)
     return features, labels

@@ -2,6 +2,7 @@ from sklearn.metrics import precision_recall_fscore_support
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
 from sklearn import cluster
 import pandas as pd
+import dataset_utils
 
 
 class Accuracy:
@@ -19,6 +20,24 @@ class Accuracy:
     def get_fmeasue(self):
         return self.fmeasure
 
+
+def create_accuracy_frame():
+    return pd.DataFrame(
+        columns=['measure', 'dataset', 'context', 'threshold', 'label', 'precision', 'recall', 'f-measure', 'dropped']
+    )
+
+def append_to_accuracy_frame(frame, accuracy, measure, dataset, context, corr_threshold, dropped):
+    assert isinstance(accuracy, Accuracy)
+    assert dataset in [dataset_utils.DATASET_ORG, dataset_utils.DATASET_UTIL]
+    assert context in ['training', 'validation']
+    assert isinstance(dropped, int)
+
+    frame.loc[len(frame)] = [measure, dataset, context, corr_threshold, "P",
+                             accuracy.get_precision()[0], accuracy.get_recall()[0], accuracy.get_fmeasue()[0],
+                             dropped]
+    frame.loc[len(frame)] = [measure, dataset, context, corr_threshold, "NP",
+                             accuracy.get_precision()[1], accuracy.get_recall()[1], accuracy.get_fmeasue()[1],
+                             dropped]
 
 def get_scaler(data):
     scaler = StandardScaler()
