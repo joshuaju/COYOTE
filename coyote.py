@@ -164,8 +164,6 @@ elif args['cluster']:
     results_org = cluster_pipeline(dataset_utils.DATASET_ORG, validate=True, corr_threshold=corr_threshold)
     results_util = cluster_pipeline(dataset_utils.DATASET_UTIL, validate=True, corr_threshold=corr_threshold)
 
-    for key in results_org:
-        print results_org[key].get_accuracy_frame(), "\n"
     output = args['--out']
     if output:
         output = os.path.expanduser(output)
@@ -174,9 +172,12 @@ elif args['cluster']:
         if os.path.isfile(output):
             write_header = False
             open_mode = 'a'
-        # TODO
-        # frame = pd.concat([accuracy_frame_org, accuracy_frame_util])
-        # frame.to_csv(output, header=write_header, mode=open_mode)
+        frames = []
+        for key in results_org:
+            frames.append(results_org[key].get_accuracy_frame())
+        for key in results_util:
+            frames.append(results_util[key].get_accuracy_frame())
+        pd.concat(frames, ignore_index=True).to_csv(output, header=write_header, mode=open_mode)
 else:
     print "UNDEFINED COMMAND LINE ARGUMENTS"
     exit(1)

@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
+
 def walk_measures(df):
     for key, series in df.groupby('measure'):
         print ">>>Measure: ", key
@@ -30,14 +31,13 @@ def walk_measures(df):
 
     plt.show()
 
+
 def find_best(frame):
     frame = frame[frame.fmeasure == frame.fmeasure.max()]
     frame = frame[frame.precision == frame.precision.max()]
     frame = frame[frame.recall == frame.recall.max()]
     frame = frame[frame.threshold == frame.threshold.min()]
     print frame
-
-
 
 
 def accuracy_plot(ax, frame):
@@ -55,5 +55,3 @@ def accuracy_plot(ax, frame):
 df = pd.read_csv('plots/accuracy.csv')
 df = df[df.label == 'P']
 walk_measures(df)
-
-
