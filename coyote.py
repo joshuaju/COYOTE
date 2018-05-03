@@ -20,11 +20,13 @@ import subprocess
 
 # ----------------------------------------------------------------------------------------------------------------------
 class ClusterPipelineOutput():
-    def __init__(self, model, scaler, dropped_features, accuracy_frame):
+    def __init__(self, model, scaler, dropped_features, accuracy_frame, label_converter, predicted_labels):
         self.model = model
         self.scaler = scaler
         self.dropped_features = dropped_features
         self.accuracy_frame = accuracy_frame
+        self.label_converter = label_converter
+        self.predicted_labels = predicted_labels
 
     def get_model(self):
         return self.model
@@ -37,6 +39,12 @@ class ClusterPipelineOutput():
 
     def get_accuracy_frame(self):
         return self.accuracy_frame
+
+    def get_label_converter(self):
+        return self.label_converter
+
+    def get_predicted_labels(self):
+        return self.predicted_labels
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -56,26 +64,16 @@ def cluster_validate(features, true_labels, to_drop, scaler, model, label_conver
     return accuracy
 
 
-def cluster_predict(features, to_drop, scaler, model):
+def cluster_predict(features, to_drop, scaler, model, label_converter):
     features = features.drop(to_drop, axis=1)
-    print len(features.columns)
     scaled_features = clustering.scale_data(features, scaler)
     labels = clustering.predict(scaled_features, model)
-    return labels
+    return label_converter.convert_to_strings(labels)
 
 
-def prediction_pipeline(features, cluster_pipeline_output_map):
-    for measure in cluster_pipeline_output_map:
-        results = cluster_pipeline_output_map[measure]
-        print "Predicting for %s..." % measure
-        labels = cluster_predict(features=features, to_drop=results.get_dropped_features(),
-                                 scaler=results.get_scaler(), model=results.get_model())
-        print labels, "\n***\n"
-    print "\nDone"
-
-
-def cluster_pipeline(dataset, validate, config):
+def cluster_pipeline(dataset, validate, config, dataset_to_predict=None):
     assert dataset in [dataset_utils.DATASET_ORG, dataset_utils.DATASET_UTIL]
+    assert dataset_to_predict in [None, dataset_utils.DATASET_VALIDATION, dataset_utils.DATASET_18M]
     assert isinstance(validate, bool)
 
     all_measures, all_labels = dataset_utils.load_dataset(dataset)
@@ -106,7 +104,18 @@ def cluster_pipeline(dataset, validate, config):
                                                 measure=measure, dataset=dataset, context="validation",
                                                 corr_threshold=threshold, dropped=len(dropped_features)
                                                 )
-        result_map[measure] = ClusterPipelineOutput(model, scaler, dropped_features, accuracy_frame)
+        predicted_series = None
+        if not dataset_to_predict == None:
+            print "Loading features for prediction..."
+            measures_predict, _ = dataset_utils.load_dataset(dataset_to_predict)
+            print "Finished loading features."
+
+            features_predict = measures_predict.xs(measure, level='measure')
+            predicted_labels = cluster_predict(features=features_predict, to_drop=dropped_features,
+                                     scaler=scaler, model=model,
+                                     label_converter=label_converter)
+            predicted_series = pd.Series(data=predicted_labels, index=features_predict.index)
+        result_map[measure] = ClusterPipelineOutput(model, scaler, dropped_features, accuracy_frame, label_converter, predicted_series)
     return result_map
 
 
@@ -165,13 +174,9 @@ elif args['cluster']:
 
     with open(config_path, 'r') as config_file:
         config = json.load(config_file)
-    results_org = cluster_pipeline(dataset=dataset_utils.DATASET_ORG, validate=True, config=config)
-    results_util = cluster_pipeline(dataset=dataset_utils.DATASET_UTIL, validate=True, config=config)
-    #
-    # print "Loading features..."
-    # features_18M, _ = dataset_utils.load_dataset(dataset_utils.DATASET_VALIDATION)
-    # prediction_pipeline(features=features_18M, cluster_pipeline_output_map=results_util)
-    #
+    results_org = cluster_pipeline(dataset=dataset_utils.DATASET_ORG, validate=True, config=config, dataset_to_predict=dataset_utils.DATASET_VALIDATION)
+    results_util = cluster_pipeline(dataset=dataset_utils.DATASET_UTIL, validate=True, config=config, dataset_to_predict=dataset_utils.DATASET_VALIDATION)
+
     output = args['--out']
     if output:
         output = os.path.expanduser(output)
@@ -187,7 +192,6 @@ elif args['cluster']:
             frames.append(results_util[key].get_accuracy_frame())
         pd.concat(frames, ignore_index=True).to_csv(output, header=write_header, mode=open_mode)
 
-    # print ",.,.,.,."
 
 elif args['explore']:
     import json
