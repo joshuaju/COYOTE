@@ -59,15 +59,16 @@ def train(features, true_labels):
     model = cluster.KMeans(n_clusters=2, init='k-means++', n_init=10, max_iter=300, random_state=10).fit(features)
     cluster_labels = model.labels_
 
-    predicted_labels = __convert_to_string_labels__(cluster_labels, true_labels)
+    predicted_labels, label_converter = __convert_to_string_labels__(cluster_labels, true_labels)
 
     p, r, f = __precision_recall_fscore(true_labels, predicted_labels)
-    return model, Accuracy(p, r, f)
+    return model, label_converter, Accuracy(p, r, f)
 
 
-def validate(model, features, true_labels):
+def validate(model, features, true_labels, label_converter):
     cluster_labels = model.predict(features)
-    predicted_labels = __convert_to_string_labels__(cluster_labels, true_labels)
+    predicted_labels = label_converter.convert_to_strings(cluster_labels)
+    #predicted_labels, _ = __convert_to_string_labels__(cluster_labels, true_labels)
     p, r, f = __precision_recall_fscore(true_labels, predicted_labels)
     return Accuracy(p, r, f)
 
@@ -108,8 +109,25 @@ def __convert_to_string_labels__(predicted_labels, true_labels):
         value_for_first = 1
         value_for_second = 0
 
-    predicted_labels = pd.Series(predicted_labels)
-    # replace the numeric label with the determined string labels
-    predicted_labels.replace(to_replace=value_for_first, value=first_label, inplace=True)
-    predicted_labels.replace(to_replace=value_for_second, value=second_label, inplace=True)
-    return predicted_labels
+    converter = LabelConverter(num1=value_for_first, string1=first_label, num2=value_for_second, string2=second_label)
+    return converter.convert_to_strings(predicted_labels), converter
+
+
+class LabelConverter:
+    def __init__(self, num1, string1, num2, string2):
+        self.num1 = num1
+        self.string1 = string1
+        self.num2 = num2
+        self.string2 = string2
+
+    def convert_to_strings(self, numeric_values):
+        numeric_series = pd.Series(numeric_values)
+        numeric_series = numeric_series.replace(to_replace=self.num1, value=self.string1)
+        numeric_series = numeric_series.replace(to_replace=self.num2, value=self.string2)
+        return numeric_series
+
+    def convert_to_numbers(self, string_series):
+        assert isinstance(string_series, pd.Series)
+        string_series = string_series.replace(to_replace=self.string1, value=self.num1)
+        string_series = string_series.replace(to_replace=self.string2, value=self.num2)
+        return string_series

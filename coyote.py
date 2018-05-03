@@ -46,13 +46,13 @@ def cluster_train(features, true_labels, corr_threshold):
     features, dropped_features = __drop_features__(features, corr_threshold)
     scaler = clustering.get_scaler(features)
     scaled_features = clustering.scale_data(features, scaler)
-    model, accuracy = clustering.train(scaled_features, true_labels)
-    return model, scaler, dropped_features, accuracy
+    model, label_converter, accuracy = clustering.train(scaled_features, true_labels)
+    return model, scaler, dropped_features, accuracy, label_converter
 
 
-def cluster_validate(features, true_labels, to_drop, scaler, model):
+def cluster_validate(features, true_labels, to_drop, scaler, model, label_converter):
     scaled_features = clustering.scale_data(features.drop(to_drop, axis=1), scaler)
-    accuracy = clustering.validate(model, scaled_features, true_labels)
+    accuracy = clustering.validate(model, scaled_features, true_labels, label_converter)
     return accuracy
 
 
@@ -62,6 +62,7 @@ def cluster_predict(features, to_drop, scaler, model):
     scaled_features = clustering.scale_data(features, scaler)
     labels = clustering.predict(scaled_features, model)
     return labels
+
 
 def prediction_pipeline(features, cluster_pipeline_output_map):
     for measure in cluster_pipeline_output_map:
@@ -83,13 +84,12 @@ def cluster_pipeline(dataset, validate, config):
     for measure in measure_names:
         accuracy_frame = clustering.create_accuracy_frame()
 
-
         threshold = config[dataset][measure]
         assert not threshold == None
 
         features = all_measures.xs(measure, level='measure')
         labels = all_labels.xs(measure, level='measure')
-        model, scaler, dropped_features, training_accuracy = cluster_train(features, labels, threshold)
+        model, scaler, dropped_features, training_accuracy, label_converter = cluster_train(features, labels, threshold)
         clustering.append_to_accuracy_frame(
             frame=accuracy_frame, accuracy=training_accuracy,
             measure=measure, dataset=dataset, context="training",
@@ -101,7 +101,7 @@ def cluster_pipeline(dataset, validate, config):
                 dataset_utils.DATASET_VALIDATION)
             features = all_measures_validation.xs(measure, level='measure')
             labels = all_labels_validation.xs(measure, level='measure')
-            validation_accuracy = cluster_validate(features, labels, dropped_features, scaler, model)
+            validation_accuracy = cluster_validate(features, labels, dropped_features, scaler, model, label_converter)
             clustering.append_to_accuracy_frame(frame=accuracy_frame, accuracy=validation_accuracy,
                                                 measure=measure, dataset=dataset, context="validation",
                                                 corr_threshold=threshold, dropped=len(dropped_features)
@@ -135,22 +135,6 @@ def extract(path_to_timeseries, path_to_featuretable):
                                                                       path_to_featuretable, measure=COL_MEASURE)
 
 
-def train_and_validate(features, true_labels, features_validation, true_labels_validation):
-    ''' Trains and validates a K-means classifier. Prints results to stdout.'''
-
-    scaler = clustering.get_scaler(features)
-
-    scaled_features = clustering.scale_data(features, scaler)
-    scaled_features_validation = clustering.scale_data(features_validation, scaler)
-
-    assert len(features.columns) == (scaled_features.shape[1])
-    assert len(features_validation.columns) == (scaled_features_validation.shape[1])
-
-    model, train_p, train_r, train_f = clustering.train(scaled_features, true_labels)
-    val_p, val_r, val_f = clustering.validate(model, scaled_features_validation, true_labels_validation)
-    return train_p, train_r, train_f, val_p, val_r, val_f
-
-
 def __drop_features__(frame, corr_threshold):
     ''' Drops features exceeding the correlation threshold permanently from the frame.
 
@@ -178,14 +162,15 @@ if args['extract']:
 elif args['cluster']:
     config_path = os.path.expanduser(args['--config'])
     import json
+
     with open(config_path, 'r') as config_file:
         config = json.load(config_file)
     results_org = cluster_pipeline(dataset=dataset_utils.DATASET_ORG, validate=True, config=config)
     results_util = cluster_pipeline(dataset=dataset_utils.DATASET_UTIL, validate=True, config=config)
     #
-    #print "Loading features..."
-    #features_18M, _ = dataset_utils.load_dataset(dataset_utils.DATASET_VALIDATION)
-    #prediction_pipeline(features=features_18M, cluster_pipeline_output_map=results_util)
+    # print "Loading features..."
+    # features_18M, _ = dataset_utils.load_dataset(dataset_utils.DATASET_VALIDATION)
+    # prediction_pipeline(features=features_18M, cluster_pipeline_output_map=results_util)
     #
     output = args['--out']
     if output:
@@ -202,12 +187,11 @@ elif args['cluster']:
             frames.append(results_util[key].get_accuracy_frame())
         pd.concat(frames, ignore_index=True).to_csv(output, header=write_header, mode=open_mode)
 
-
-
-    #print ",.,.,.,."
+    # print ",.,.,.,."
 
 elif args['explore']:
     import json
+
     out_explore = os.path.expanduser(args['--explore'])
     out_config = os.path.expanduser(args['--config'])
 
