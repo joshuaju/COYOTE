@@ -1,7 +1,7 @@
 """
 Usage:
     coyote.py extract <TIMESERIES> <FEATURETABLE>
-    coyote.py cluster --config=<FILE> [--out=<FILE>]
+    coyote.py cluster --config=<FILE> [--accuracy_file=<FILE>] [--prediction_file=<FILE>]
     coyote.py explore --explore=<FILE> --config=<File>
 """
 import feature_extraction
@@ -14,9 +14,9 @@ from docopt import docopt
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-import sys, os
+import os
 import subprocess
-
+import json
 
 # ----------------------------------------------------------------------------------------------------------------------
 class ClusterPipelineOutput():
@@ -76,7 +76,11 @@ def cluster_pipeline(dataset, validate, config, dataset_to_predict=None):
     assert dataset_to_predict in [None, dataset_utils.DATASET_VALIDATION, dataset_utils.DATASET_18M]
     assert isinstance(validate, bool)
 
+    print "Loading data..."
     all_measures, all_labels = dataset_utils.load_dataset(dataset)
+    all_measures_predict, _ = dataset_utils.load_dataset(dataset_to_predict)
+    print "Finished loading features."
+
     result_map = {}
     measure_names = all_measures.index.levels[1].unique()  # level[1] is the 'measure' column
     for measure in measure_names:
@@ -106,15 +110,11 @@ def cluster_pipeline(dataset, validate, config, dataset_to_predict=None):
                                                 )
         predicted_series = None
         if not dataset_to_predict == None:
-            print "Loading features for prediction..."
-            measures_predict, _ = dataset_utils.load_dataset(dataset_to_predict)
-            print "Finished loading features."
-
-            features_predict = measures_predict.xs(measure, level='measure')
+            features_predict = all_measures_predict.xs(measure, level='measure')
             predicted_labels = cluster_predict(features=features_predict, to_drop=dropped_features,
                                      scaler=scaler, model=model,
                                      label_converter=label_converter)
-            predicted_series = pd.Series(data=predicted_labels, index=features_predict.index)
+            predicted_series = pd.Series(data=predicted_labels.values, index=features_predict.index, name=measure)
         result_map[measure] = ClusterPipelineOutput(model, scaler, dropped_features, accuracy_frame, label_converter, predicted_series)
     return result_map
 
@@ -170,14 +170,19 @@ if args['extract']:
     extract(path_to_timeseries, path_to_featuretable)
 elif args['cluster']:
     config_path = os.path.expanduser(args['--config'])
-    import json
+
+    prediction_dataset = None
+    if args['--prediction_file']:
+        prediction_dataset = dataset_utils.DATASET_VALIDATION # TODO read from command line!
+        predictions_path = os.path.expanduser(args['--prediction_file'])
+        print predictions_path
 
     with open(config_path, 'r') as config_file:
         config = json.load(config_file)
-    results_org = cluster_pipeline(dataset=dataset_utils.DATASET_ORG, validate=True, config=config, dataset_to_predict=dataset_utils.DATASET_VALIDATION)
-    results_util = cluster_pipeline(dataset=dataset_utils.DATASET_UTIL, validate=True, config=config, dataset_to_predict=dataset_utils.DATASET_VALIDATION)
+    results_org = cluster_pipeline(dataset=dataset_utils.DATASET_ORG, validate=True, config=config, dataset_to_predict=prediction_dataset)
+    results_util = cluster_pipeline(dataset=dataset_utils.DATASET_UTIL, validate=True, config=config, dataset_to_predict=prediction_dataset)
 
-    output = args['--out']
+    output = args['--accuracy_file']
     if output:
         output = os.path.expanduser(output)
         write_header = True
@@ -186,11 +191,34 @@ elif args['cluster']:
             write_header = False
             open_mode = 'a'
         frames = []
+        predictions_org = []
+        predictions_util = []
         for key in results_org:
             frames.append(results_org[key].get_accuracy_frame())
+            predictions_org.append(results_org[key].get_predicted_labels())
         for key in results_util:
             frames.append(results_util[key].get_accuracy_frame())
+            predictions_util.append(results_util[key].get_predicted_labels())
         pd.concat(frames, ignore_index=True).to_csv(output, header=write_header, mode=open_mode)
+
+        prediction_org_frame = pd.concat(predictions_org, axis=1).reset_index()
+        prediction_org_frame['dataset'] = dataset_utils.DATASET_ORG
+
+        predictions_util_frame = pd.concat(predictions_util, axis=1).reset_index()
+        predictions_util_frame['dataset'] = dataset_utils.DATASET_UTIL
+
+        predictions_frame = pd.concat([prediction_org_frame, predictions_util_frame])
+
+
+        #def __majority_vote__(row):
+        #    count = 0
+        #    for value in row:
+        #        if value == 'P':
+        #            count = count + 1
+        #    return count
+        #predictions_frame['vote_project'] = predictions_frame.apply(__majority_vote__, axis=1)
+
+        predictions_frame.to_csv(predictions_path)
 
 
 elif args['explore']:
@@ -216,3 +244,4 @@ elif args['explore']:
 else:
     print "UNDEFINED COMMAND LINE ARGUMENTS"
     exit(1)
+
