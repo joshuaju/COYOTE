@@ -80,7 +80,7 @@ def find_best(frame):
 def accuracy_plot(ax, frame, dataset):
     ax = frame.plot(kind='scatter', x='threshold', y='precision', ax=ax, marker='^', color='r', alpha=0.5, label='Precision', legend=False)
     ax = frame.plot(kind='scatter', x='threshold', y='recall', ax=ax, marker='v', color='g', alpha=0.5, label='Recall', legend=False)
-    ax = frame.plot(kind='line', x='threshold', y='fmeasure', marker='o', color='b', ax=ax, label='F-Measure', legend=False)
+    ax = frame.plot(kind='line', x='threshold', y='fmeasure', markersize=3, marker='o', color='b', ax=ax, label='F-Measure', legend=False)
 
     ax.set_xlim([0, 1])
     ax.set_ylim([0, 1])
