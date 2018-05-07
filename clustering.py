@@ -50,17 +50,12 @@ def scale_data(data, scaler):
 
 
 def train(features, true_labels):
-    # after normalisation there can be NaN values, which have to be removed/replaced.
-
-    # TODO remove
-    # nan_columns = features.columns[features.isna().any()].tolist()
-    # features = features.drop(nan_columns, axis=1)
 
     model = cluster.KMeans(n_clusters=2, init='k-means++', n_init=10, max_iter=300, random_state=10).fit(features)
+
     cluster_labels = model.labels_
 
     predicted_labels, label_converter = __convert_to_string_labels__(cluster_labels, true_labels)
-
     p, r, f = __precision_recall_fscore(true_labels, predicted_labels)
     return model, label_converter, Accuracy(p, r, f)
 

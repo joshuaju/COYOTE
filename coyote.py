@@ -78,7 +78,8 @@ def cluster_pipeline(dataset, validate, config, dataset_to_predict=None):
 
     print "Loading data..."
     all_measures, all_labels = dataset_utils.load_dataset(dataset)
-    all_measures_predict, _ = dataset_utils.load_dataset(dataset_to_predict)
+    if not dataset_to_predict == None:
+        all_measures_predict, _ = dataset_utils.load_dataset(dataset_to_predict)
     print "Finished loading features."
 
     result_map = {}
@@ -201,24 +202,13 @@ elif args['cluster']:
             predictions_util.append(results_util[key].get_predicted_labels())
         pd.concat(frames, ignore_index=True).to_csv(output, header=write_header, mode=open_mode)
 
-        prediction_org_frame = pd.concat(predictions_org, axis=1).reset_index()
-        prediction_org_frame['dataset'] = dataset_utils.DATASET_ORG
-
-        predictions_util_frame = pd.concat(predictions_util, axis=1).reset_index()
-        predictions_util_frame['dataset'] = dataset_utils.DATASET_UTIL
-
-        predictions_frame = pd.concat([prediction_org_frame, predictions_util_frame])
-
-
-        #def __majority_vote__(row):
-        #    count = 0
-        #    for value in row:
-        #        if value == 'P':
-        #            count = count + 1
-        #    return count
-        #predictions_frame['vote_project'] = predictions_frame.apply(__majority_vote__, axis=1)
-
-        predictions_frame.to_csv(predictions_path)
+        if not prediction_dataset == None:
+            prediction_org_frame = pd.concat(predictions_org, axis=1).reset_index()
+            prediction_org_frame['dataset'] = dataset_utils.DATASET_ORG
+            predictions_util_frame = pd.concat(predictions_util, axis=1).reset_index()
+            predictions_util_frame['dataset'] = dataset_utils.DATASET_UTIL
+            predictions_frame = pd.concat([prediction_org_frame, predictions_util_frame])
+            predictions_frame.to_csv(predictions_path)
 
 
 elif args['explore']:
@@ -235,7 +225,7 @@ elif args['explore']:
                 config_map[k1][k2] = threshold
             with open('.tmp_config.json', 'w') as tmp_config:
                 json.dump(config_map, tmp_config)
-        subprocess.call(['python', 'coyote.py', 'cluster', '--config=.tmp_config.json', '--out=%s' % out_explore])
+        subprocess.call(['python', 'coyote.py', 'cluster', '--config=.tmp_config.json', '--accuracy_file=%s' % out_explore])
 
     subprocess.call(['rm', '.tmp_config.json'])
 
