@@ -33,9 +33,16 @@ def walk_measures(df, make_plots=True):
 
         training = series[series.context == 'training']
         validation = series[series.context == 'validation']
+        print "*** %s *****************************************" % measure
+        print "Best Training:"
+        find_best(training[training.dataset == 'org'], measure)
+        find_best(training[training.dataset == 'util'], measure)
 
-        best_org = find_best(validation[validation.dataset == 'org'])
-        best_util = find_best(validation[validation.dataset == 'util'])
+        print "\nBest Validation:"
+        best_org = find_best(validation[validation.dataset == 'org'], measure)
+        best_util = find_best(validation[validation.dataset == 'util'], measure)
+
+        print "\n\n"
 
         config[DATASET_ORG][measure] = float("%.2f" % best_org)
         config[DATASET_UTIL][measure] = float("%.2f" % best_util)
@@ -56,26 +63,35 @@ def walk_measures(df, make_plots=True):
 
     handles = [handle_p, handle_r, handle_f[0]]
     labels = [handle_p.get_label(), handle_r.get_label(), label_f[0]]
-    fig_training.legend(handles, labels, 'lower center', ncol=3)
-    fig_validation.legend(handles, labels, 'lower center', ncol=3)
+    fig_training.legend(handles, labels, 'lower center', ncol=3, prop={'size': 12})
+    fig_validation.legend(handles, labels, 'lower center', ncol=3, prop={'size': 12})
     plt.tight_layout(pad=2.75)
-    plt.savefig("/home/joshua/Desktop/validation_accuracy.png")
+    plt.savefig("/home/joshua/Desktop/validation_accuracy.svg")
     plt.close()
     plt.tight_layout(pad=2.75)
-    plt.savefig("/home/joshua/Desktop/training_accuracy.png")
+    plt.savefig("/home/joshua/Desktop/training_accuracy.svg")
     plt.close()
     exit() # TODO REMOVE
     return config
 
 
-def find_best(frame):
+def find_best(frame, measure):
     frame = frame[frame.fmeasure == frame.fmeasure.max()]
     frame = frame[frame.precision == frame.precision.max()]
     frame = frame[frame.recall == frame.recall.max()]
     frame = frame[frame.threshold == frame.threshold.min()]
-    #print frame
+    print_latex_table(measure, frame)
     return frame.threshold.values[0]
 
+def print_latex_table(measure, frame):
+    dataset = frame.dataset.values[0]
+    threshold = frame.threshold.values[0]
+    p = frame.precision.values[0] * 100
+    r = frame.recall.values[0] * 100
+    f = frame.fmeasure.values[0] * 100
+    dropped = frame.dropped.values[0]
+    latex = "%s&%s&%.2f&%.2f&%.2f&%.2f&%s" % (dataset, measure, threshold, p, r, f, dropped)
+    print latex
 
 def accuracy_plot(ax, frame, dataset):
     ax = frame.plot(kind='scatter', x='threshold', y='precision', ax=ax, marker='^', color='r', alpha=0.5, label='Precision', legend=False)
@@ -93,5 +109,5 @@ def accuracy_plot(ax, frame, dataset):
 
     ax.grid(color='k', which='both', linestyle='--', linewidth=1, alpha=0.2)
 
-# pd.set_option("display.max_rows", 500)
-# pd.set_option('display.expand_frame_repr', False)
+pd.set_option("display.max_rows", 500)
+pd.set_option('display.expand_frame_repr', False)

@@ -14,7 +14,7 @@ def load_dataset(dataset):
     elif dataset == DATASET_VALIDATION:
         return load_validation_combined_with_labels()
     elif dataset == DATASET_18M:
-        return load_18M()
+        return load_18M(), None
 
 def load_org_and_neg_combined_with_labels():
     org, org_labels = load_organisation()

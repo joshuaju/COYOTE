@@ -83,7 +83,7 @@ def cluster_pipeline(dataset, validate, config, dataset_to_predict=None):
     print "Finished loading features."
 
     result_map = {}
-    measure_names = all_measures.index.levels[1].unique()  # level[1] is the 'measure' column
+    measure_names =  all_measures.index.levels[1].unique()  # level[1] is the 'measure' column
     for measure in measure_names:
         accuracy_frame = clustering.create_accuracy_frame()
 
@@ -174,7 +174,7 @@ elif args['cluster']:
 
     prediction_dataset = None
     if args['--prediction_file']:
-        prediction_dataset = dataset_utils.DATASET_VALIDATION # TODO read from command line!
+        prediction_dataset = dataset_utils.DATASET_18M # TODO read from command line!
         predictions_path = os.path.expanduser(args['--prediction_file'])
         print predictions_path
 
