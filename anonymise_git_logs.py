@@ -62,7 +62,6 @@ def run(log_dir, anonoyme_log_dir):
                 with open(save_to_path, 'wb') as anonymised_log:
                     for line in anonymised_lines:
                         anonymised_log.write(line+"\n")
-            print
 
 
 assert len(sys.argv) == 3
