@@ -1,4 +1,5 @@
 from sklearn.metrics import precision_recall_fscore_support
+from sklearn.metrics import matthews_corrcoef
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
 from sklearn import cluster
 import pandas as pd
@@ -6,10 +7,11 @@ import dataset_utils
 
 
 class Accuracy:
-    def __init__(self, precision, recall, fmeasure):
+    def __init__(self, precision, recall, fmeasure, mcc):
         self.precision = precision
         self.recall = recall
         self.fmeasure = fmeasure
+        self.mcc = mcc
 
     def get_precision(self):
         return self.precision
@@ -20,10 +22,13 @@ class Accuracy:
     def get_fmeasue(self):
         return self.fmeasure
 
+    def get_mcc(self):
+        return self.mcc
+
 
 def create_accuracy_frame():
     return pd.DataFrame(
-        columns=['measure', 'dataset', 'context', 'threshold', 'label', 'precision', 'recall', 'fmeasure', 'dropped']
+        columns=['measure', 'dataset', 'context', 'threshold', 'label', 'precision', 'recall', 'fmeasure', 'dropped', 'MCC']
     )
 
 def append_to_accuracy_frame(frame, accuracy, measure, dataset, context, corr_threshold, dropped):
@@ -34,10 +39,10 @@ def append_to_accuracy_frame(frame, accuracy, measure, dataset, context, corr_th
 
     frame.loc[len(frame)] = [measure, dataset, context, corr_threshold, "P",
                              accuracy.get_precision()[0], accuracy.get_recall()[0], accuracy.get_fmeasue()[0],
-                             dropped]
+                             dropped, accuracy.get_mcc()]
     frame.loc[len(frame)] = [measure, dataset, context, corr_threshold, "NP",
                              accuracy.get_precision()[1], accuracy.get_recall()[1], accuracy.get_fmeasue()[1],
-                             dropped]
+                             dropped, accuracy.get_mcc()]
 
 def get_scaler(data):
     scaler = StandardScaler()
@@ -57,7 +62,8 @@ def train(features, true_labels):
 
     predicted_labels, label_converter = __convert_to_string_labels__(cluster_labels, true_labels)
     p, r, f = __precision_recall_fscore(true_labels, predicted_labels)
-    return model, label_converter, Accuracy(p, r, f)
+    mcc = matthews_corrcoef(true_labels, predicted_labels)
+    return model, label_converter, Accuracy(p, r, f, mcc)
 
 
 def validate(model, features, true_labels, label_converter):
@@ -65,7 +71,8 @@ def validate(model, features, true_labels, label_converter):
     predicted_labels = label_converter.convert_to_strings(cluster_labels)
     #predicted_labels, _ = __convert_to_string_labels__(cluster_labels, true_labels)
     p, r, f = __precision_recall_fscore(true_labels, predicted_labels)
-    return Accuracy(p, r, f)
+    mcc = matthews_corrcoef(true_labels, predicted_labels)
+    return Accuracy(p, r, f, mcc)
 
 
 def predict(features, model):
