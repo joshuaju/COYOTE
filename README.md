@@ -19,12 +19,12 @@ COYOTE requires some files to work. These files contain data collected during th
 
 Make sure to copy the feature tables to your directory.
 
-    * "featuretable/features_18M.csv" (large dataset)
-    * "featuretable/features_org.csv" (organisation dataset)
-    * "featuretable/features_util.csv" (utility dataset)
-    * "featuretable/features_neg.csv" (negative instances dataset)
-    * "featuretable/features_val_p.csv" (well-engineered project of the validation dataset)
-    * "featuretable/features_val_np.csv" (not well-engineered project of the validation dataset)
+ * "featuretable/features_18M.csv" (large dataset)
+ * "featuretable/features_org.csv" (organisation dataset)
+ * "featuretable/features_util.csv" (utility dataset)
+ * "featuretable/features_neg.csv" (negative instances dataset)
+ * "featuretable/features_val_p.csv" (well-engineered project of the validation dataset)
+ * "featuretable/features_val_np.csv" (not well-engineered project of the validation dataset)
 
 You may changes the paths to these files in dataset_utils.py.
     
@@ -51,9 +51,9 @@ Clusters projects (represented by feature vectors) into two classes: P (Project)
 
 will 
 
-    1. train COYOTE using the organisation, utility and negative instances feature tables, 
-    2. validate COYOTE against the validation feature tables
-    3. predict the labels of the large dataset 
+ 1. train COYOTE using the organisation, utility and negative instances feature tables, 
+ 2. validate COYOTE against the validation feature tables
+ 3. predict the labels of the large dataset 
 
 The result of step 2 are saved to the accuracy file, the result of step 3 to the prediction_file.
 
@@ -71,12 +71,12 @@ You may save it and use it to cluster
 
 ### How to predict other datasets?
 
-    1. use RHINO to create timeseries of the dataset.
-    2. extract the features from the timeseries using COYOTE extract.
+ 1. use RHINO to create timeseries of the dataset.
+ 2. extract the features from the timeseries using COYOTE extract.
 
 COYOTE is hard-coded against the large dataset. However, you may want to tweak the program to predict another dataset. 
 
-    3. update dataset_utils.py
+ 3. update dataset_utils.py
 
 Find the following section in "dataset_utils.py" 
 
@@ -99,37 +99,47 @@ Explores a range of correlation thresholds to find the best threshold configurat
 
 will
 
-    1. train COYOTE several times with different thresholds
-    2. store the accuracy (precision, recall, f-measure) of all trained classifiers in exp.csv
-    3. determine the best configuration an save it in cfg.json
+ 1. train COYOTE several times with different thresholds
+ 2. store the accuracy (precision, recall, f-measure) of all trained classifiers in exp.csv
+ 3. determine the best configuration an save it in cfg.json
 
 
 # Workflow example
 
 1. Clone COYOTE
-    
-    git clone https://github.com/joshuaju/COYOTE.git
+      
+   
+   git clone https://github.com/joshuaju/COYOTE.git
+
 
 2. Go into directory 
 
+    
     cd COYOTE
     mkdir featuretable
+    
 
 3. Place the required files in "featuretable" directory
 
 4. Extract features from timeseries
 
+    
     python coyote extract ./timeseries/example_ts.csv ./featuretable/example_ft.csv
+
 
 5. Explore measures to find the best configuration
 
+    
     python coyote.py --explore./exp.csv --config=./cfg.json
+
 
 6. Analyse exp.csv to see all results
 
 7. Cluster the large dataset with your configuration. You may change "dataset_utils.py" to point to your own dataset. See "How to predict other datasets?" above.
 
+    
     python coyote.py cluster --config=cfg.json --accuracy_file=./acc.csv --prediction_file=./pred.csv
+
 
 8. Analyse acc.csv to see the accuracy of the trained classifier
 
