@@ -50,9 +50,11 @@ Clusters projects (represented by feature vectors) into two classes: P (Project)
     python coyote.py cluster --config=./cfg.json --accuracy_file=./acc.csv --prediction_file=./pred.csv
 
 will 
+
     1. train COYOTE using the organisation, utility and negative instances feature tables, 
     2. validate COYOTE against the validation feature tables
     3. predict the labels of the large dataset 
+
 The result of step 2 are saved to the accuracy file, the result of step 3 to the prediction_file.
 
 NOTE: Predicting the large dataset required more than 8GB of RAM (i.e. my Laptop has 8GB and will exit with a memory error).
@@ -68,6 +70,7 @@ Below you will find an example configuration. This configuration was created usi
 You may save it and use it to cluster
 
 ### How to predict other datasets?
+
     1. use RHINO to create timeseries of the dataset.
     2. extract the features from the timeseries using COYOTE extract.
 
@@ -95,6 +98,7 @@ Explores a range of correlation thresholds to find the best threshold configurat
     python coyote.py --explore./exp.csv --config=./cfg.json
 
 will
+
     1. train COYOTE several times with different thresholds
     2. store the accuracy (precision, recall, f-measure) of all trained classifiers in exp.csv
     3. determine the best configuration an save it in cfg.json
