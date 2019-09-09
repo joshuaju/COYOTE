@@ -108,3 +108,6 @@ logs/
 timeseries/
 featuretable/
 plots/
+ll_data/
+*.csv
+*.json
