@@ -70,8 +70,7 @@ def walk_measures(df, make_plots=True):
     plt.close()
     plt.tight_layout(pad=2.75)
     plt.savefig("/home/joshua/Desktop/training_accuracy.svg")
-    plt.close()
-    exit() # TODO REMOVE
+    plt.close()   
     return config
 
 
