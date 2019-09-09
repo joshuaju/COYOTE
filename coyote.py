@@ -97,7 +97,8 @@ def cluster_pipeline(dataset, validate, config, dataset_to_predict=None):
             frame=accuracy_frame, accuracy=training_accuracy,
             measure=measure, dataset=dataset, context="training",
             corr_threshold=threshold, dropped=len(dropped_features)
-        )
+        )  
+        write_low_level_data(features, training_accuracy, "./ll_data/training_%s_%s.csv" % (dataset, measure))
 
         if validate:
             all_measures_validation, all_labels_validation = dataset_utils.load_dataset(
@@ -109,6 +110,8 @@ def cluster_pipeline(dataset, validate, config, dataset_to_predict=None):
                                                 measure=measure, dataset=dataset, context="validation",
                                                 corr_threshold=threshold, dropped=len(dropped_features)
                                                 )
+            write_low_level_data(features, validation_accuracy, "./ll_data/validation_%s_%s.csv" % (dataset, measure))
+            
         predicted_series = None
         if not dataset_to_predict == None:
             features_predict = all_measures_predict.xs(measure, level='measure')
@@ -116,8 +119,13 @@ def cluster_pipeline(dataset, validate, config, dataset_to_predict=None):
                                      scaler=scaler, model=model,
                                      label_converter=label_converter)
             predicted_series = pd.Series(data=predicted_labels.values, index=features_predict.index, name=measure)
-        result_map[measure] = ClusterPipelineOutput(model, scaler, dropped_features, accuracy_frame, label_converter, predicted_series)
+        pipeline_output = ClusterPipelineOutput(model, scaler, dropped_features, accuracy_frame, label_converter, predicted_series)
+        result_map[measure] = pipeline_output
     return result_map
+
+def write_low_level_data(features, accuracy, path):
+    frm = pd.DataFrame(index=["repos", "true", "predicted"], data=[features.index, accuracy.get_true_labels(), accuracy.get_predicted_labels()])
+    frm.transpose().to_csv(path)
 
 
 def extract(path_to_timeseries, path_to_featuretable):
