@@ -178,6 +178,9 @@ if args['extract']:
     path_to_featuretable = args['<FEATURETABLE>']
     extract(path_to_timeseries, path_to_featuretable)
 elif args['cluster']:
+    if not os.path.exists("./ll_data/"):
+        os.mkdir("./ll_data/")
+        
     config_path = os.path.expanduser(args['--config'])
 
     prediction_dataset = None

@@ -53,9 +53,14 @@ will
 
  1. train COYOTE using the organisation, utility and negative instances feature tables, 
  2. validate COYOTE against the validation feature tables
+    
+        results are saved to the accuracy file and to the "ll_data" directory
+
  3. predict the labels of the large dataset 
 
-The result of step 2 are saved to the accuracy file, the result of step 3 to the prediction_file.
+        results are saved to the prediction_file.
+
+You may omit the --prediction_file flag to only perform step 1 and 2. 
 
 NOTE: Predicting the large dataset required more than 8GB of RAM (i.e. my Laptop has 8GB and will exit with a memory error).
 
@@ -109,14 +114,19 @@ will
 1. Clone COYOTE
       
    
-   git clone https://github.com/joshuaju/COYOTE.git
+        git clone https://github.com/joshuaju/COYOTE.git
 
 
-2. Go into directory 
+2. Go into directory
 
     
-    cd COYOTE
-    mkdir featuretable
+        cd COYOTE
+
+    and execute:
+
+        mkdir featuretable
+
+        mkdir ll_data
     
 
 3. Place the required files in "featuretable" directory
@@ -124,21 +134,23 @@ will
 4. Extract features from timeseries
 
     
-    python coyote extract ./timeseries/example_ts.csv ./featuretable/example_ft.csv
+        python coyote extract ./timeseries/example_ts.csv ./featuretable/example_ft.csv
 
 
 5. Explore measures to find the best configuration
 
     
-    python coyote.py --explore./exp.csv --config=./cfg.json
+        python coyote.py explore --explore=./exp.csv --config=./cfg.json
 
 
-6. Analyse exp.csv to see all results
+6. Analyse exp.csv to see all results and take a look at the configuration, which will show you your best classifieres
 
 7. Cluster the large dataset with your configuration. You may change "dataset_utils.py" to point to your own dataset. See "How to predict other datasets?" above.
 
     
-    python coyote.py cluster --config=cfg.json --accuracy_file=./acc.csv --prediction_file=./pred.csv
+        python coyote.py cluster --config=cfg.json --accuracy_file=./acc.csv --prediction_file=./pred.csv
+
+    Note: If you get a MemoryError you may need more RAM. For example, the large dataset cannot be clustered with 8GB of RAM.
 
 
 8. Analyse acc.csv to see the accuracy of the trained classifier
