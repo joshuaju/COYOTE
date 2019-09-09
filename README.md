@@ -132,7 +132,7 @@ will
         mkdir ll_data
     
 
-3. Place the required files in "featuretable" directory
+3. **Place the required files in "featuretable" directory** (see "Setup" above)
 
 4. Extract features from timeseries
 
