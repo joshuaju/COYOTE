@@ -2,16 +2,19 @@
 This tool is part of the master thesis "Clustering Software Projects at Large-scale using Time-Series". COYOTE is a clustering tool, that works on time-series created from git history logs. 
 
 # Setup
+The following instructions were performed on Linux Mint 19.2 Cinnamon. They are expected to work with Ubuntu as well.
 
 ## Install dependencies
-sudo apt-get install python2.7 python-pip python-dev build-essential python-tk python-setuptools
+    
+    sudo apt-get install python2.7 python-pip python-dev build-essential python-tk python-setuptools
 
 ## Install python modules with pip2
-pip install pandas 
-sudo pip install --upgrade setuptools
-sudo pip install matplotlib
-sudo pip install sklearn
-sudo pip install docopt
+    
+    pip install pandas 
+    sudo pip install --upgrade setuptools
+    sudo pip install matplotlib
+    sudo pip install sklearn
+    sudo pip install docopt
 
 ## Required files
 
