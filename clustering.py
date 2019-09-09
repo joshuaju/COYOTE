@@ -7,11 +7,13 @@ import dataset_utils
 
 
 class Accuracy:
-    def __init__(self, precision, recall, fmeasure, mcc):
+    def __init__(self, precision, recall, fmeasure, mcc, true_labels, predicted_labels):
         self.precision = precision
         self.recall = recall
         self.fmeasure = fmeasure
         self.mcc = mcc
+        self.true_labels = true_labels
+        self.predicted_labels = predicted_labels
 
     def get_precision(self):
         return self.precision
@@ -24,6 +26,12 @@ class Accuracy:
 
     def get_mcc(self):
         return self.mcc
+    
+    def get_true_labels(self):
+        return self.true_labels
+
+    def get_predicted_labels(self):
+        return self.predicted_labels
 
 
 def create_accuracy_frame():
@@ -63,7 +71,7 @@ def train(features, true_labels):
     predicted_labels, label_converter = __convert_to_string_labels__(cluster_labels, true_labels)
     p, r, f = __precision_recall_fscore(true_labels, predicted_labels)
     mcc = matthews_corrcoef(true_labels, predicted_labels)
-    return model, label_converter, Accuracy(p, r, f, mcc)
+    return model, label_converter, Accuracy(p, r, f, mcc, true_labels, predicted_labels)
 
 
 def validate(model, features, true_labels, label_converter):
@@ -72,7 +80,7 @@ def validate(model, features, true_labels, label_converter):
     #predicted_labels, _ = __convert_to_string_labels__(cluster_labels, true_labels)
     p, r, f = __precision_recall_fscore(true_labels, predicted_labels)
     mcc = matthews_corrcoef(true_labels, predicted_labels)
-    return Accuracy(p, r, f, mcc)
+    return Accuracy(p, r, f, mcc, true_labels, predicted_labels)
 
 
 def predict(features, model):
