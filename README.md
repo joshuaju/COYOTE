@@ -44,7 +44,7 @@ Extract a featuretable from a timeseries. Executing the command
 
     python coyote.py ./timeseries.csv ./features.csv
 
-will read timeseries (as created by RHINO) and transform them to features.
+will read timeseries (as created by https://github.com/Ionman64/PHANTOM) and transform them to features.
 
 ## COYOTE cluster
 
@@ -79,7 +79,7 @@ You may save it and use it to cluster
 
 ### How to predict other datasets?
 
- 1. use RHINO to create timeseries of the dataset.
+ 1. use https://github.com/Ionman64/PHANTOM to create timeseries of the dataset.
  2. extract the features from the timeseries using COYOTE extract.
 
 COYOTE is hard-coded against the large dataset. However, you may want to tweak the program to predict another dataset. 
